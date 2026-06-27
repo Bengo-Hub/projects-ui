@@ -18,7 +18,7 @@ interface SidebarProps {
 export default function Sidebar({ orgSlug }: SidebarProps) {
   const pathname = usePathname();
   return (
-    <aside className="w-64 bg-white border-r border-border flex flex-col shrink-0">
+    <aside className="w-64 bg-card border-r border-border flex flex-col shrink-0">
       <div className="p-4 border-b border-border">
         <h1 className="text-lg font-semibold text-primary">Projects</h1>
         <p className="text-xs text-muted-foreground truncate">{orgSlug}</p>

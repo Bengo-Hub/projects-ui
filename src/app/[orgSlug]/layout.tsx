@@ -6,6 +6,7 @@ import { QueryProvider } from '@/providers/query-provider';
 import { AuthProvider } from '@/providers/auth-provider';
 import Sidebar from '@/components/layout/sidebar';
 import Header from '@/components/layout/header';
+import { PlatformScopeGuard } from '@/components/layout/platform-scope-guard';
 
 export default function OrgLayout({ children }: { children: ReactNode }) {
   const params = useParams();
@@ -15,6 +16,7 @@ export default function OrgLayout({ children }: { children: ReactNode }) {
   return (
     <QueryProvider>
       <AuthProvider>
+        <PlatformScopeGuard />
         <div className="flex h-screen overflow-hidden bg-background">
           <Sidebar orgSlug={orgSlug} />
           <div className="flex flex-1 flex-col overflow-hidden min-w-0">
