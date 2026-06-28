@@ -2,8 +2,10 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { CheckSquare, Users, Flag, Calendar, ArrowLeft } from 'lucide-react';
+import { CheckSquare, Users, Flag, Calendar, ArrowLeft, Lock } from 'lucide-react';
+import { useFeature } from '@bengo-hub/shared-ui-lib/subscription';
 import { useProject, useProjectSummary } from '@/hooks/useProjects';
+import { UPGRADE_URL } from '@/components/subscription/subscription-banner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PageLoading } from '@/components/ui/loading';
@@ -18,14 +20,29 @@ export default function ProjectDetailPage() {
   const { data: project, isLoading, isError } = useProject(orgSlug, projectId);
   const { data: summary } = useProjectSummary(orgSlug, projectId);
 
+  // Premium tabs gated by plan feature. Tabs without a feature are part of the
+  // `project_management` base (already gated at the sidebar/workspace level).
+  const hasGantt = useFeature('gantt_chart');
+  const hasMilestoneBilling = useFeature('milestone_billing');
+
   if (isLoading) return <PageLoading />;
   if (isError || !project) return <ErrorBanner message="Failed to load project." />;
 
-  const subNav = [
+  const subNav: { href: string; label: string; feature?: string; locked?: boolean }[] = [
     { href: `/${orgSlug}/projects/${projectId}/tasks`, label: 'Tasks' },
-    { href: `/${orgSlug}/projects/${projectId}/milestones`, label: 'Milestones' },
+    {
+      href: `/${orgSlug}/projects/${projectId}/milestones`,
+      label: 'Milestones',
+      feature: 'milestone_billing',
+      locked: !hasMilestoneBilling,
+    },
     { href: `/${orgSlug}/projects/${projectId}/team`, label: 'Team' },
-    { href: `/${orgSlug}/projects/${projectId}/gantt`, label: 'Gantt' },
+    {
+      href: `/${orgSlug}/projects/${projectId}/gantt`,
+      label: 'Gantt',
+      feature: 'gantt_chart',
+      locked: !hasGantt,
+    },
   ];
 
   const tasksDone = summary?.tasks_done ?? summary?.completed_tasks ?? 0;
@@ -56,15 +73,32 @@ export default function ProjectDetailPage() {
 
       {/* Sub-navigation */}
       <div className="flex gap-1 border-b border-border">
-        {subNav.map(({ href, label }) => (
-          <Link
-            key={href}
-            href={href}
-            className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {label}
-          </Link>
-        ))}
+        {subNav.map(({ href, label, locked }) =>
+          locked ? (
+            <a
+              key={href}
+              href={UPGRADE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`Upgrade to unlock ${label}`}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            >
+              {label}
+              <span className="flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 border border-amber-500/20">
+                <Lock className="h-2.5 w-2.5" />
+                Pro
+              </span>
+            </a>
+          ) : (
+            <Link
+              key={href}
+              href={href}
+              className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {label}
+            </Link>
+          )
+        )}
       </div>
 
       {/* Stats */}

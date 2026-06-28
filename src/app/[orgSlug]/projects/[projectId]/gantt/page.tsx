@@ -1,12 +1,14 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import { useFeature } from '@bengo-hub/shared-ui-lib/subscription';
 import { useGanttData } from '@/hooks/useTasks';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageLoading } from '@/components/ui/loading';
 import { ErrorBanner } from '@/components/ui/error-banner';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FeatureLocked } from '@/components/subscription/feature-locked';
 import { BarChart2 } from 'lucide-react';
 
 export default function GanttPage() {
@@ -14,7 +16,18 @@ export default function GanttPage() {
   const orgSlug = (params?.orgSlug as string) ?? '';
   const projectId = (params?.projectId as string) ?? '';
 
+  const hasGantt = useFeature('gantt_chart');
+
   const { data: tasks, isLoading, isError } = useGanttData(orgSlug, projectId);
+
+  if (!hasGantt) {
+    return (
+      <FeatureLocked
+        title="Gantt charts are a premium feature"
+        description="Upgrade your plan to visualize task schedules and dependencies on a timeline."
+      />
+    );
+  }
 
   if (isLoading) return <PageLoading />;
   if (isError) return <ErrorBanner message="Failed to load Gantt data." />;

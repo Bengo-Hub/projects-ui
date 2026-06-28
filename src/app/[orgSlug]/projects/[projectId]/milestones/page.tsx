@@ -3,7 +3,9 @@
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { Plus, Flag } from 'lucide-react';
+import { useFeature } from '@bengo-hub/shared-ui-lib/subscription';
 import { useMilestones, useCreateMilestone } from '@/hooks/useMilestones';
+import { FeatureLocked } from '@/components/subscription/feature-locked';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -84,6 +86,8 @@ export default function MilestonesPage() {
   const projectId = (params?.projectId as string) ?? '';
   const [showCreate, setShowCreate] = useState(false);
 
+  const hasMilestoneBilling = useFeature('milestone_billing');
+
   const { data, isLoading, isError } = useMilestones(orgSlug, projectId);
   const createMilestone = useCreateMilestone(orgSlug, projectId);
 
@@ -95,6 +99,15 @@ export default function MilestonesPage() {
 
   function handleCreate(input: CreateMilestoneInput) {
     createMilestone.mutate(input, { onSuccess: () => setShowCreate(false) });
+  }
+
+  if (!hasMilestoneBilling) {
+    return (
+      <FeatureLocked
+        title="Milestone billing is a premium feature"
+        description="Upgrade your plan to track project milestones and bill against them."
+      />
+    );
   }
 
   if (isLoading) return <PageLoading />;

@@ -2,13 +2,23 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FolderKanban, FileText, LayoutDashboard, ChevronRight } from 'lucide-react';
+import { FolderKanban, FileText, LayoutDashboard, ChevronRight, Lock } from 'lucide-react';
+import { useFeature } from '@bengo-hub/shared-ui-lib/subscription';
 import { cn } from '@/lib/utils';
+import { UPGRADE_URL } from '@/components/subscription/subscription-banner';
 
-const navItems = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  /** Subscription feature code — shows an upgrade lock badge when not in the tenant's plan. */
+  subFeature?: string;
+}
+
+const navItems: NavItem[] = [
   { href: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: 'projects', label: 'Projects', icon: FolderKanban },
-  { href: 'tenders', label: 'Tenders', icon: FileText },
+  { href: 'projects', label: 'Projects', icon: FolderKanban, subFeature: 'project_management' },
+  { href: 'tenders', label: 'Tenders', icon: FileText, subFeature: 'project_management' },
 ];
 
 interface SidebarProps {
@@ -17,6 +27,10 @@ interface SidebarProps {
 
 export default function Sidebar({ orgSlug }: SidebarProps) {
   const pathname = usePathname();
+  // The whole projects workspace (Projects + Tenders) is gated behind `project_management`.
+  // Exempt tenants (platform owner / demo / service_charge) read this as enabled.
+  const hasProjectManagement = useFeature('project_management');
+
   return (
     <aside className="w-64 bg-card border-r border-border flex flex-col shrink-0">
       <div className="p-4 border-b border-border">
@@ -24,9 +38,31 @@ export default function Sidebar({ orgSlug }: SidebarProps) {
         <p className="text-xs text-muted-foreground truncate">{orgSlug}</p>
       </div>
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {navItems.map(({ href, label, icon: Icon, subFeature }) => {
           const fullHref = `/${orgSlug}/${href}`;
           const active = pathname.startsWith(fullHref);
+          const locked = subFeature === 'project_management' && !hasProjectManagement;
+
+          if (locked) {
+            return (
+              <a
+                key={href}
+                href={`${UPGRADE_URL}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground/50 hover:text-muted-foreground hover:bg-accent/40 transition-colors"
+                title="Upgrade to unlock the projects workspace"
+              >
+                <Icon className="h-4 w-4 shrink-0 opacity-60" />
+                <span className="flex-1">{label}</span>
+                <span className="flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 border border-amber-500/20 shrink-0">
+                  <Lock className="h-2.5 w-2.5" />
+                  Pro
+                </span>
+              </a>
+            );
+          }
+
           return (
             <Link
               key={href}
