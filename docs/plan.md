@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-**System Purpose**: A collaborative project management and task tracking portal for the BengoBox ecosystem. It helps teams manage internal projects, client engagements, and cross-service initiatives.
+**System Purpose**: A collaborative project management and task tracking portal for the Codevertex ecosystem. It helps teams manage internal projects, client engagements, and cross-service initiatives.
 
 **Key Capabilities**:
 - **Project Tracking**: Manage project lifecycles, milestones, and deliverables.
