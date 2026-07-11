@@ -89,6 +89,7 @@ export interface UserProfile {
   isPlatformOwner: boolean;
   isSuperUser: boolean;
   tenant?: Record<string, unknown>;
+  email_verification?: import('@bengo-hub/shared-ui-lib/auth').EmailVerificationState;
 }
 
 export async function fetchProfile(accessToken?: string): Promise<UserProfile> {
@@ -115,5 +116,6 @@ export async function fetchProfile(accessToken?: string): Promise<UserProfile> {
     isPlatformOwner: data.is_platform_owner === true || (data.tenant_slug as string) === 'codevertex',
     isSuperUser: roles.includes('superuser'),
     tenant: data.tenant as Record<string, unknown> | undefined,
+    email_verification: data.email_verification as UserProfile['email_verification'],
   };
 }

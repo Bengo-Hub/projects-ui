@@ -9,6 +9,7 @@ import Sidebar from '@/components/layout/sidebar';
 import Header from '@/components/layout/header';
 import { PlatformScopeGuard } from '@/components/layout/platform-scope-guard';
 import { SubscriptionBanner } from '@/components/subscription/subscription-banner';
+import { VerifyEmailPrompt } from '@/components/auth/VerifyEmailPrompt';
 import { useSubscription } from '@/hooks/use-subscription';
 
 function OrgShell({ orgSlug, children }: { orgSlug: string; children: ReactNode }) {
@@ -22,6 +23,7 @@ function OrgShell({ orgSlug, children }: { orgSlug: string; children: ReactNode 
         <div className="flex flex-1 flex-col overflow-hidden min-w-0">
           <Header orgSlug={orgSlug} />
           <SubscriptionBanner />
+          <VerifyEmailPrompt />
           <main className="flex-1 overflow-y-auto p-6 bg-accent/5">
             {children}
           </main>
