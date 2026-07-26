@@ -16,9 +16,9 @@ COPY . .
 
 # Next.js bakes NEXT_PUBLIC_* at build time.
 # Without these the browser would call localhost and fail in production.
-ARG NEXT_PUBLIC_API_URL=https://projectsapi.codevertexitsolutions.com
-ARG NEXT_PUBLIC_AUTH_URL=https://sso.codevertexitsolutions.com
-ARG NEXT_PUBLIC_NOTIFICATIONS_URL=https://notifications.codevertexitsolutions.com
+ARG NEXT_PUBLIC_API_URL=https://projectsapi.codevertexafrica.com
+ARG NEXT_PUBLIC_AUTH_URL=https://sso.codevertexafrica.com
+ARG NEXT_PUBLIC_NOTIFICATIONS_URL=https://notifications.codevertexafrica.com
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_AUTH_URL=$NEXT_PUBLIC_AUTH_URL
 ENV NEXT_PUBLIC_NOTIFICATIONS_URL=$NEXT_PUBLIC_NOTIFICATIONS_URL

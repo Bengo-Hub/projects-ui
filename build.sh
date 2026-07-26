@@ -72,9 +72,9 @@ trivy fs . --exit-code "$TRIVY_ECODE" --format table || true
 
 info "Building Docker image (NEXT_PUBLIC_* baked at build time)"
 DOCKER_BUILDKIT=1 docker build . -t "${IMAGE_REPO}:${GIT_COMMIT_ID}" \
-  --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-https://projectsapi.codevertexitsolutions.com}" \
-  --build-arg NEXT_PUBLIC_AUTH_URL="${NEXT_PUBLIC_AUTH_URL:-https://sso.codevertexitsolutions.com}" \
-  --build-arg NEXT_PUBLIC_NOTIFICATIONS_URL="${NEXT_PUBLIC_NOTIFICATIONS_URL:-https://notifications.codevertexitsolutions.com}"
+  --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-https://projectsapi.codevertexafrica.com}" \
+  --build-arg NEXT_PUBLIC_AUTH_URL="${NEXT_PUBLIC_AUTH_URL:-https://sso.codevertexafrica.com}" \
+  --build-arg NEXT_PUBLIC_NOTIFICATIONS_URL="${NEXT_PUBLIC_NOTIFICATIONS_URL:-https://notifications.codevertexafrica.com}"
 success "Docker build complete"
 
 if [[ ${DEPLOY} != "true" ]]; then

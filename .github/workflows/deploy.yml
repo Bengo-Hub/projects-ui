@@ -172,9 +172,9 @@ jobs:
           APP_NAME: projects-ui
           GIT_USER: ${{ secrets.GIT_USER || 'Projects Bot' }}
           GIT_EMAIL: ${{ secrets.GIT_EMAIL || 'dev@bengobox.com' }}
-          NEXT_PUBLIC_API_URL: https://projectsapi.codevertexitsolutions.com
-          NEXT_PUBLIC_AUTH_URL: https://sso.codevertexitsolutions.com
-          NEXT_PUBLIC_NOTIFICATIONS_URL: https://notifications.codevertexitsolutions.com
+          NEXT_PUBLIC_API_URL: https://projectsapi.codevertexafrica.com
+          NEXT_PUBLIC_AUTH_URL: https://sso.codevertexafrica.com
+          NEXT_PUBLIC_NOTIFICATIONS_URL: https://notifications.codevertexafrica.com
         run: |
           chmod +x build.sh
           ./build.sh
