@@ -10,7 +10,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@bengo-hub/shared-ui-lib": "github:Bengo-Hub/shared-ui-lib#v0.1.30",
+    "@bengo-hub/shared-ui-lib": "github:Bengo-Hub/shared-ui-lib#v0.1.47",
     "@radix-ui/react-avatar": "latest",
     "@radix-ui/react-dialog": "latest",
     "@radix-ui/react-dropdown-menu": "latest",
