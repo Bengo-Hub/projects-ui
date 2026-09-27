@@ -156,10 +156,18 @@ export interface TenderMeeting {
   created_at: string;
 }
 
+export interface TenderStatusMetric {
+  count: number;
+  value: number;
+}
+
 export interface TenderMetrics {
   total: number;
-  by_status: Record<string, number>;
+  by_status: Record<string, TenderStatusMetric>;
   total_estimated_value: number;
+  win_rate: number;
+  pipeline_value: number;
+  awarded_value: number;
 }
 
 export interface PaginatedResponse<T> {
@@ -190,8 +198,8 @@ export interface ProjectSummary {
   status: string;
   total_tasks: number;
   completed_tasks: number;
-  tasks_total?: number;
-  tasks_done?: number;
+  overdue_tasks: number;
+  tasks_by_status: Record<string, number>;
   progress: number;
   total_members: number;
   total_milestones: number;

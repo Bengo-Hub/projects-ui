@@ -16,7 +16,8 @@ export type UpdateProjectInput = Partial<CreateProjectInput>;
 export interface ListProjectsParams {
   status?: string;
   page?: number;
-  page_size?: number;
+  // Page size: projects-api uses the shared pagination params (limit, page).
+  limit?: number;
 }
 
 function base(orgSlug: string) {

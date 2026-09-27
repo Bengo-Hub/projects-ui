@@ -13,6 +13,7 @@ import { ErrorBanner } from '@/components/ui/error-banner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { format } from 'date-fns';
 import type { CreateTenderInput } from '@/lib/api/tenders';
+import { formatCompact } from '@/lib/utils';
 
 const STATUS_TABS = ['all', 'draft', 'evaluating', 'submitted', 'awarded', 'lost', 'cancelled'] as const;
 type StatusTab = (typeof STATUS_TABS)[number];
@@ -201,7 +202,7 @@ export default function TendersPage() {
                   A
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{metrics.by_status?.awarded ?? 0}</p>
+                  <p className="text-2xl font-bold">{metrics.by_status?.awarded?.count ?? 0}</p>
                   <p className="text-xs text-muted-foreground">Awarded</p>
                 </div>
               </div>
@@ -214,7 +215,7 @@ export default function TendersPage() {
                   E
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{metrics.by_status?.evaluating ?? 0}</p>
+                  <p className="text-2xl font-bold">{metrics.by_status?.evaluating?.count ?? 0}</p>
                   <p className="text-xs text-muted-foreground">Evaluating</p>
                 </div>
               </div>
@@ -226,7 +227,7 @@ export default function TendersPage() {
                 <DollarSign className="h-5 w-5 text-amber-500" />
                 <div>
                   <p className="text-lg font-bold">
-                    {(metrics.total_estimated_value / 1000).toFixed(0)}K
+                    {formatCompact(metrics.total_estimated_value ?? 0)}
                   </p>
                   <p className="text-xs text-muted-foreground">Est. Value</p>
                 </div>

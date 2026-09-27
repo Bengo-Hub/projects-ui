@@ -45,8 +45,8 @@ export default function ProjectDetailPage() {
     },
   ];
 
-  const tasksDone = summary?.tasks_done ?? summary?.completed_tasks ?? 0;
-  const tasksTotal = summary?.tasks_total ?? summary?.total_tasks ?? 0;
+  const tasksDone = summary?.completed_tasks ?? 0;
+  const tasksTotal = summary?.total_tasks ?? 0;
   const progress = summary?.progress ?? (tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0);
 
   return (
