@@ -8,6 +8,9 @@ export interface CreateTaskInput {
   priority?: string;
   assignee_id?: string;
   due_date?: string;
+  start_date?: string;
+  estimated_hours?: number;
+  progress_pct?: number;
   parent_id?: string;
   wbs_code?: string;
 }

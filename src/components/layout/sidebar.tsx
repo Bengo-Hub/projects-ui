@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FolderKanban, FileText, LayoutDashboard, ChevronRight, Lock } from 'lucide-react';
+import { FolderKanban, FileText, LayoutDashboard, ChevronRight, Lock, PieChart } from 'lucide-react';
 import { useFeature } from '@bengo-hub/shared-ui-lib/subscription';
 import { cn } from '@/lib/utils';
 import { UPGRADE_URL } from '@/components/subscription/subscription-banner';
@@ -18,6 +18,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: 'projects', label: 'Projects', icon: FolderKanban, subFeature: 'project_management' },
+  { href: 'portfolio', label: 'Portfolio', icon: PieChart, subFeature: 'budget_tracking' },
   { href: 'tenders', label: 'Tenders', icon: FileText, subFeature: 'project_management' },
 ];
 
@@ -30,6 +31,11 @@ export default function Sidebar({ orgSlug }: SidebarProps) {
   // The whole projects workspace (Projects + Tenders) is gated behind `project_management`.
   // Exempt tenants (platform owner / demo / service_charge) read this as enabled.
   const hasProjectManagement = useFeature('project_management');
+  const hasBudgetTracking = useFeature('budget_tracking');
+  const enabled: Record<string, boolean> = {
+    project_management: hasProjectManagement,
+    budget_tracking: hasBudgetTracking,
+  };
 
   return (
     <aside className="w-64 bg-card border-r border-border flex flex-col shrink-0">
@@ -41,7 +47,7 @@ export default function Sidebar({ orgSlug }: SidebarProps) {
         {navItems.map(({ href, label, icon: Icon, subFeature }) => {
           const fullHref = `/${orgSlug}/${href}`;
           const active = pathname.startsWith(fullHref);
-          const locked = subFeature === 'project_management' && !hasProjectManagement;
+          const locked = !!subFeature && !enabled[subFeature];
 
           if (locked) {
             return (

@@ -29,6 +29,9 @@ export interface Task {
   priority: string; // low, medium, high, critical
   assignee_id?: string;
   due_date?: string;
+  start_date?: string;
+  estimated_hours?: number;
+  progress_pct?: number;
   completed_at?: string;
   parent_id?: string;
   wbs_code?: string;

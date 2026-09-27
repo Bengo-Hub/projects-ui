@@ -24,6 +24,7 @@ export default function ProjectDetailPage() {
   // `project_management` base (already gated at the sidebar/workspace level).
   const hasGantt = useFeature('gantt_chart');
   const hasMilestoneBilling = useFeature('milestone_billing');
+  const hasBudgetTracking = useFeature('budget_tracking');
 
   if (isLoading) return <PageLoading />;
   if (isError || !project) return <ErrorBanner message="Failed to load project." />;
@@ -42,6 +43,12 @@ export default function ProjectDetailPage() {
       label: 'Gantt',
       feature: 'gantt_chart',
       locked: !hasGantt,
+    },
+    {
+      href: `/${orgSlug}/projects/${projectId}/financials`,
+      label: 'Financials',
+      feature: 'budget_tracking',
+      locked: !hasBudgetTracking,
     },
   ];
 

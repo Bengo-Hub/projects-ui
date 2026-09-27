@@ -88,6 +88,34 @@ function CreateTaskModal({
               />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Start Date</label>
+              <input
+                type="date"
+                value={form.start_date ?? ''}
+                onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value || undefined }))}
+                className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Estimate (hours)</label>
+              <input
+                type="number"
+                min={0}
+                step={0.5}
+                value={form.estimated_hours ?? ''}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, estimated_hours: e.target.value === '' ? undefined : Number(e.target.value) }))
+                }
+                className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                placeholder="e.g. 8"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Start date and estimate let the project track planned against earned progress.
+          </p>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isPending}>
               Cancel
@@ -146,6 +174,10 @@ export default function TasksPage() {
 
   function handleStatusChange(id: string, status: string) {
     updateTask.mutate({ id, data: { status } });
+  }
+
+  function handleProgressChange(id: string, progress: number) {
+    updateTask.mutate({ id, data: { progress_pct: progress } });
   }
 
   if (isLoading) return <PageLoading />;
@@ -219,6 +251,8 @@ export default function TasksPage() {
                   <th className="py-3 text-left font-medium text-muted-foreground">Status</th>
                   <th className="py-3 text-left font-medium text-muted-foreground">Priority</th>
                   <th className="py-3 text-left font-medium text-muted-foreground">Due Date</th>
+                  <th className="py-3 text-right font-medium text-muted-foreground">Estimate</th>
+                  <th className="py-3 text-left font-medium text-muted-foreground pl-4">Progress</th>
                 </tr>
               </thead>
               <tbody>
@@ -229,6 +263,25 @@ export default function TasksPage() {
                     <td className="py-3"><Badge status={task.priority} /></td>
                     <td className="py-3 text-muted-foreground">
                       {task.due_date ? new Date(task.due_date).toLocaleDateString() : '—'}
+                    </td>
+                    <td className="py-3 text-right text-muted-foreground">
+                      {task.estimated_hours != null ? `${task.estimated_hours} h` : "—"}
+                    </td>
+                    <td className="py-3 pl-4">
+                      {task.status === "done" ? (
+                        <span className="text-xs text-green-700">100%</span>
+                      ) : (
+                        <select
+                          value={task.progress_pct ?? 0}
+                          onChange={(e) => handleProgressChange(task.id, Number(e.target.value))}
+                          className="text-xs border border-border rounded px-1.5 py-1 focus:outline-none"
+                          aria-label="Progress"
+                        >
+                          {[0, 10, 25, 50, 75, 90].map((p) => (
+                            <option key={p} value={p}>{p}%</option>
+                          ))}
+                        </select>
+                      )}
                     </td>
                   </tr>
                 ))}
