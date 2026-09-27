@@ -36,22 +36,25 @@
 ### ❌ Financials & Billing → **finance-service** / **erp**
 - **Redirects To**: Respective service dashboards.
 - **Why**: Project billing, invoicing, and payroll are handled by the finance and ERP services.
+- **Update 2026-09-27:** projects-ui will show a read-mostly Financials tab (EVM, budget vs actual, committed vs actual) and edit the project budget through projects-api, which proxies to treasury. Treasury remains the owner of the budget data.
 
 ---
 
 ## Roadmap
 
+**Status (verified against code 2026-09-27):** Sprint 1 done; Sprint 2 partially done; Sprint 3 planned. Also shipped outside this roadmap: tenders (list, detail, committees, evaluations), project team, milestones and Gantt pages. Project financials, EVM, portfolio and tender pipeline are In progress (plan budgets-planning-projects-bi-2026-09-27). Open items: [backlog.md](backlog.md).
+
 ### Sprint 1: Foundation & SSO
-- [ ] Project scaffolding with Next.js 15.
-- [ ] SSO integration with `auth-ui`.
-- [ ] Core layout with project dashboard shell.
+- [x] Project scaffolding with Next.js 15.
+- [x] SSO integration with `auth-ui`.
+- [x] Core layout with project dashboard shell.
 
 ### Sprint 2: Task Management
-- [ ] Kanban board implementation.
-- [ ] Task detail view with comments and attachments.
-- [ ] Milestone tracking.
+- [x] Kanban board implementation (tasks page).
+- [ ] Task detail view with comments and attachments. A `useComments` hook exists but no page uses it; there is no task detail page.
+- [x] Milestone tracking.
 
 ### Sprint 3: Collaboration & Reporting
-- [ ] Real-time activity feed.
+- [ ] Real-time activity feed (the API has activity routes; the UI does not show them).
 - [ ] Project status reports.
-- [ ] Time tracking interface.
+- [ ] Time tracking interface. Hours will come from ERP timesheets, not a projects time log.
