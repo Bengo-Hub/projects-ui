@@ -4,13 +4,13 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat git
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10
 COPY package.json pnpm-lock.yaml* .npmrc* ./
 RUN pnpm install --frozen-lockfile
 
 FROM node:20-alpine AS builder
 WORKDIR /app
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
