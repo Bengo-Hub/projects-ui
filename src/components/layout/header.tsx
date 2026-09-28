@@ -37,7 +37,7 @@ export default function Header({ orgSlug, className }: HeaderProps) {
   return (
     <header
       className={cn(
-        'h-14 border-b border-border bg-white flex items-center justify-between px-6 shrink-0',
+        'h-14 border-b border-border bg-white flex items-center justify-between px-6 shrink-0 print:hidden',
         className
       )}
     >

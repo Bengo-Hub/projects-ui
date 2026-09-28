@@ -1,28 +1,19 @@
 # Projects UI Backlog
 
-**Last updated:** 2026-09-27. Built by checking `docs/plan.md` against the code. Each item names its source. Items marked **In progress (plan budgets-planning-projects-bi-2026-09-27)** are being built now under `.claude/plans/budgets-planning-projects-bi-2026-09-27.md`; do not start them separately. Backend gaps live in `projects-service/projects-api/docs/backlog.md`.
+**Last updated:** 2026-09-28. Built by checking `docs/plan.md` against the code. Each item names its source. Backend gaps live in `projects-service/projects-api/docs/backlog.md`.
 
-## Fixes
+## Done
 
-All In progress (plan budgets-planning-projects-bi-2026-09-27, Phase 0):
+Kept for one release so reviewers can see what moved; delete on the next pass.
 
-- Tender metrics cards read the wrong shape: Awarded and Evaluating show 0 and Est. Value shows "NaNK". Source: budgets plan audit.
-- List pages send `page_size`, but the API reads `limit`. Source: budgets plan audit.
-- Drop the dual project summary field names. Source: budgets plan audit.
+- Fixes (budgets plan Phase 0): tender metrics read `by_status`, list pages send `limit`, one project summary shape.
+- Project finance (budgets plan Phase 6): Financials tab (CPI, SPI, EAC, VAC, S-curve, cost breakdown, committed vs actual, hours logged), task estimate and progress fields, portfolio with RAG health, tender pipeline panel on the Tenders page (stage counts and values, open pipeline value, win rate), recharts.
+- Tasks and collaboration (plan.md Sprints 2 and 3): task detail view with comments, attachments and dependencies; activity feed on project and task pages; project discussion and files on the overview; project status report page; Time page fed by ERP timesheet hours.
 
-## Project finance
+## Open
 
-All In progress (plan budgets-planning-projects-bi-2026-09-27, Phase 6). The Financials tab and the portfolio dashboard gate on the existing projects feature code `budget_tracking` (T3), decided 2026-09-27.
-
-- Project Financials tab: CPI, SPI, EAC and VAC cards, S-curve of PV, EV and AC, cost breakdown, committed vs actual, budget edit through the proxy. Source: budgets plan.
-- Task estimate and progress fields. Source: budgets plan.
-- Portfolio dashboard with RAG health. Source: budgets plan.
-- Tender pipeline view. Source: budgets plan.
-- Add recharts (same version as treasury-ui). Source: budgets plan.
-
-## Tasks and collaboration
-
-- Task detail view with comments and attachments (hook exists, no page). Source: plan.md Sprint 2.
-- Activity feed on project and task pages. Source: plan.md Sprint 3.
-- Project status reports. Source: plan.md Sprint 3.
-- Time tracking view, fed by ERP timesheet hours. Source: plan.md Sprint 3.
+- Attachments are links (the user pastes a URL to the file in their drive or document store). Direct upload needs a storage service; none exists in the platform yet. Source: plan.md Sprint 2.
+- Comments and activity show user ids ("User 1a2b3c4d") for everyone but the signed-in user. Needs a user directory lookup (auth-api) to show names. Source: task detail review 2026-09-28.
+- The activity feed polls every 30 seconds. Switch to push when projects-api ships WebSocket updates (projects-api backlog, Planning and collaboration). Source: plan.md Sprint 3.
+- Status report task lists read the first 100 tasks (the API page cap). A server-side report endpoint would lift this for large projects. Source: status report review 2026-09-28.
+- @mentions in comments, once projects-api supports them. Source: projects-api backlog.

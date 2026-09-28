@@ -37,6 +37,7 @@ export function useCreateTask(orgSlug: string, projectId: string) {
     mutationFn: (input: CreateTaskInput) => tasksApi.create(orgSlug, projectId, input),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
+      void qc.invalidateQueries({ queryKey: ['activities', orgSlug, projectId] });
       toast.success('Task created');
     },
     onError: () => toast.error('Failed to create task'),
@@ -50,6 +51,7 @@ export function useUpdateTask(orgSlug: string, projectId: string) {
       tasksApi.update(orgSlug, projectId, id, data),
     onSuccess: (_, { id }) => {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
+      void qc.invalidateQueries({ queryKey: ['activities', orgSlug, projectId] });
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId, id] });
       toast.success('Task updated');
     },
@@ -63,6 +65,7 @@ export function useDeleteTask(orgSlug: string, projectId: string) {
     mutationFn: (id: string) => tasksApi.delete(orgSlug, projectId, id),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
+      void qc.invalidateQueries({ queryKey: ['activities', orgSlug, projectId] });
       toast.success('Task deleted');
     },
     onError: () => toast.error('Failed to delete task'),

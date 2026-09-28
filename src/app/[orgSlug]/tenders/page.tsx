@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { format } from 'date-fns';
 import type { CreateTenderInput } from '@/lib/api/tenders';
 import { formatCompact } from '@/lib/utils';
+import { TenderPipeline } from '@/components/tenders/pipeline';
 
 const STATUS_TABS = ['all', 'draft', 'evaluating', 'submitted', 'awarded', 'lost', 'cancelled'] as const;
 type StatusTab = (typeof STATUS_TABS)[number];
@@ -235,6 +236,14 @@ export default function TendersPage() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {metrics && (
+        <TenderPipeline
+          metrics={metrics}
+          activeStatus={statusFilter}
+          onSelect={(s) => setActiveTab((cur) => (cur === s ? 'all' : (s as StatusTab)))}
+        />
       )}
 
       {/* Status tabs */}

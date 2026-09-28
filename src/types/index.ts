@@ -96,6 +96,19 @@ export interface Activity {
   occurred_at: string;
 }
 
+export interface Attachment {
+  id: string;
+  tenant_id: string;
+  project_id?: string;
+  task_id?: string;
+  file_url: string;
+  file_name: string;
+  file_size: number;
+  mime_type?: string;
+  uploaded_by: string;
+  uploaded_at: string;
+}
+
 export interface Tender {
   id: string;
   tenant_id: string;

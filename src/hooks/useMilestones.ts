@@ -28,6 +28,7 @@ export function useCreateMilestone(orgSlug: string, projectId: string) {
     mutationFn: (input: CreateMilestoneInput) => milestonesApi.create(orgSlug, projectId, input),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
+      void qc.invalidateQueries({ queryKey: ['activities', orgSlug, projectId] });
       toast.success('Milestone created');
     },
     onError: () => toast.error('Failed to create milestone'),
@@ -41,6 +42,7 @@ export function useUpdateMilestone(orgSlug: string, projectId: string) {
       milestonesApi.update(orgSlug, projectId, id, data),
     onSuccess: (_, { id }) => {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
+      void qc.invalidateQueries({ queryKey: ['activities', orgSlug, projectId] });
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId, id] });
       toast.success('Milestone updated');
     },
@@ -54,6 +56,7 @@ export function useDeleteMilestone(orgSlug: string, projectId: string) {
     mutationFn: (id: string) => milestonesApi.delete(orgSlug, projectId, id),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
+      void qc.invalidateQueries({ queryKey: ['activities', orgSlug, projectId] });
       toast.success('Milestone deleted');
     },
     onError: () => toast.error('Failed to delete milestone'),

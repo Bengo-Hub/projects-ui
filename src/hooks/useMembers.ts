@@ -20,6 +20,7 @@ export function useAddMember(orgSlug: string, projectId: string) {
     mutationFn: (input: AddMemberInput) => membersApi.add(orgSlug, projectId, input),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
+      void qc.invalidateQueries({ queryKey: ['activities', orgSlug, projectId] });
       toast.success('Member added');
     },
     onError: () => toast.error('Failed to add member'),
@@ -33,6 +34,7 @@ export function useUpdateMemberRole(orgSlug: string, projectId: string) {
       membersApi.updateRole(orgSlug, projectId, userId, { role_code }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
+      void qc.invalidateQueries({ queryKey: ['activities', orgSlug, projectId] });
       toast.success('Role updated');
     },
     onError: () => toast.error('Failed to update role'),
@@ -45,6 +47,7 @@ export function useRemoveMember(orgSlug: string, projectId: string) {
     mutationFn: (userId: string) => membersApi.remove(orgSlug, projectId, userId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
+      void qc.invalidateQueries({ queryKey: ['activities', orgSlug, projectId] });
       toast.success('Member removed');
     },
     onError: () => toast.error('Failed to remove member'),

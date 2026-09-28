@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FolderKanban, FileText, LayoutDashboard, ChevronRight, Lock, PieChart } from 'lucide-react';
+import { FolderKanban, FileText, LayoutDashboard, ChevronRight, Lock, PieChart, Clock } from 'lucide-react';
 import { useFeature } from '@bengo-hub/shared-ui-lib/subscription';
 import { cn } from '@/lib/utils';
 import { UPGRADE_URL } from '@/components/subscription/subscription-banner';
@@ -19,6 +19,7 @@ const navItems: NavItem[] = [
   { href: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: 'projects', label: 'Projects', icon: FolderKanban, subFeature: 'project_management' },
   { href: 'portfolio', label: 'Portfolio', icon: PieChart, subFeature: 'budget_tracking' },
+  { href: 'time', label: 'Time', icon: Clock, subFeature: 'budget_tracking' },
   { href: 'tenders', label: 'Tenders', icon: FileText, subFeature: 'project_management' },
 ];
 
@@ -38,7 +39,7 @@ export default function Sidebar({ orgSlug }: SidebarProps) {
   };
 
   return (
-    <aside className="w-64 bg-card border-r border-border flex flex-col shrink-0">
+    <aside className="w-64 bg-card border-r border-border flex flex-col shrink-0 print:hidden">
       <div className="p-4 border-b border-border">
         <h1 className="text-lg font-semibold text-primary">Projects</h1>
         <p className="text-xs text-muted-foreground truncate">{orgSlug}</p>
