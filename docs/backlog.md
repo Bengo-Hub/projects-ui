@@ -17,3 +17,4 @@ Kept for one release so reviewers can see what moved; delete on the next pass.
 - The activity feed polls every 30 seconds. Switch to push when projects-api ships WebSocket updates (projects-api backlog, Planning and collaboration). Source: plan.md Sprint 3.
 - Status report task lists read the first 100 tasks (the API page cap). A server-side report endpoint would lift this for large projects. Source: status report review 2026-09-28.
 - @mentions in comments, once projects-api supports them. Source: projects-api backlog.
+- Tender workflow screens: go/no-go decision with the evaluation summary, sections and review, final document and ready flag, email or physical submission, outcome. projects-api has the routes (2026-09-28); the Tenders page only shows the new statuses in its pipeline and tabs so far. Source: projects-api sprint-1.

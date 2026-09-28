@@ -6,12 +6,17 @@ import { formatCompact } from '@/lib/utils';
 const OPEN_STAGES = [
   { status: 'draft', label: 'Draft', bar: 'bg-slate-400' },
   { status: 'evaluating', label: 'Evaluating', bar: 'bg-purple-500' },
+  { status: 'preparing', label: 'Preparing', bar: 'bg-indigo-500' },
   { status: 'submitted', label: 'Submitted', bar: 'bg-blue-500' },
+  { status: 'under_review', label: 'Under review', bar: 'bg-sky-500' },
+  { status: 'shortlisted', label: 'Shortlisted', bar: 'bg-teal-500' },
+  { status: 'interview', label: 'Interview', bar: 'bg-cyan-600' },
 ] as const;
 
 const CLOSED_STAGES = [
   { status: 'awarded', label: 'Awarded', bar: 'bg-green-500' },
   { status: 'lost', label: 'Lost', bar: 'bg-red-400' },
+  { status: 'no_go', label: 'No-go', bar: 'bg-orange-400' },
   { status: 'cancelled', label: 'Cancelled', bar: 'bg-slate-300' },
 ] as const;
 

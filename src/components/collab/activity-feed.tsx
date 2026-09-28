@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { Activity } from '@/types';
 import { Loading } from '@/components/ui/loading';
+import { hasId } from '@/lib/utils';
 
 const str = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : String(v));
 const label = (v: unknown) => str(v).replace(/_/g, ' ');
@@ -62,7 +63,7 @@ export function describe(a: Activity): { icon: React.ElementType; text: string }
     case 'task.deleted':
       return { icon: Trash2, text: `deleted task ${q}` };
     case 'comment.added':
-      return { icon: MessageSquare, text: a.task_id ? `commented on task ${q}` : 'commented on the project' };
+      return { icon: MessageSquare, text: hasId(a.task_id) ? `commented on task ${q}` : 'commented on the project' };
     case 'attachment.added':
       return { icon: Paperclip, text: `attached ${str(p.file_name)}` };
     case 'attachment.removed':
@@ -92,6 +93,7 @@ export function describe(a: Activity): { icon: React.ElementType; text: string }
 
 /** who shows "You" for the signed-in user and a short id otherwise (the API returns ids only). */
 export function who(userId: string, meId?: string) {
+  if (!hasId(userId)) return 'System';
   if (meId && userId === meId) return 'You';
   return `User ${userId.slice(0, 8)}`;
 }
@@ -118,7 +120,7 @@ export function ActivityFeed({
     <ol className="space-y-3">
       {items.map((a) => {
         const { icon: Icon, text } = describe(a);
-        const linkTask = orgSlug && projectId && a.task_id && a.activity_type !== 'task.deleted';
+        const linkTask = orgSlug && projectId && hasId(a.task_id) && a.activity_type !== 'task.deleted';
         return (
           <li key={a.id} className="flex gap-3 text-sm">
             <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted">

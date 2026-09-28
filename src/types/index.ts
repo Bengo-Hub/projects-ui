@@ -116,7 +116,7 @@ export interface Tender {
   title: string;
   client_name: string;
   source?: string;
-  status: string; // draft, evaluating, submitted, awarded, lost, cancelled
+  status: string; // draft, evaluating, preparing, submitted, under_review, shortlisted, interview, awarded, lost, no_go, cancelled
   priority: string; // low, medium, high, critical
   estimated_value?: number;
   currency: string;

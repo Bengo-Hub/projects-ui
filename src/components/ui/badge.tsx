@@ -26,6 +26,11 @@ const statusColors: Record<string, string> = {
   submitted: 'bg-blue-100 text-blue-700',
   awarded: 'bg-green-100 text-green-700',
   lost: 'bg-red-100 text-red-700',
+  preparing: 'bg-indigo-100 text-indigo-700',
+  under_review: 'bg-sky-100 text-sky-700',
+  shortlisted: 'bg-teal-100 text-teal-700',
+  interview: 'bg-cyan-100 text-cyan-700',
+  no_go: 'bg-orange-100 text-orange-700',
 };
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {

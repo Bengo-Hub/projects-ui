@@ -5,6 +5,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+const NIL_UUID = '00000000-0000-0000-0000-000000000000';
+
+/** hasId is false for a missing id and for the nil UUID, which the API sends for unset optional ids. */
+export function hasId(id?: string | null): id is string {
+  return !!id && id !== NIL_UUID;
+}
+
 export function formatDate(dateStr?: string): string {
   if (!dateStr) return '—';
   return new Date(dateStr).toLocaleDateString('en-KE', {

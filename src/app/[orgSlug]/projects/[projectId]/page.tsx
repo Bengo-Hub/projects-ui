@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { PageLoading } from '@/components/ui/loading';
 import { ErrorBanner } from '@/components/ui/error-banner';
 import { format } from 'date-fns';
+import { hasId } from '@/lib/utils';
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -238,7 +239,7 @@ export default function ProjectDetailPage() {
             </CardHeader>
             <CardContent>
               <CommentThread
-                comments={(comments.data?.data ?? []).filter((c) => !c.task_id)}
+                comments={(comments.data?.data ?? []).filter((c) => !hasId(c.task_id))}
                 isLoading={comments.isLoading}
                 meId={user?.id}
                 orgSlug={orgSlug}
