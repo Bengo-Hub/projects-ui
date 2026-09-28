@@ -69,6 +69,15 @@ export interface ProjectFinancials {
   tasks_total: number;
   tasks_done: number;
   tasks_overdue: number;
+  /** Timesheet hours from ERP against the tasks' estimates; absent when ERP is not reachable. */
+  hours?: ProjectHours;
+}
+
+export interface ProjectHours {
+  estimated: number;
+  logged: number;
+  pending: number;
+  utilisation_pct: number | null;
 }
 
 export interface Paginated<T> {

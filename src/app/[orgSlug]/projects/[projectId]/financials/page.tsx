@@ -166,6 +166,19 @@ export default function ProjectFinancialsPage() {
           tone={data.tasks_overdue > 0 ? 'text-amber-600' : undefined}
           hint={data.tasks_overdue > 0 ? `${data.tasks_overdue} overdue` : 'None overdue'}
         />
+        {data.hours && (
+          <Stat
+            label="Hours logged"
+            value={`${data.hours.logged.toFixed(1)} h`}
+            tone={data.hours.utilisation_pct != null && data.hours.utilisation_pct > evm.percent_complete + 10 ? 'text-amber-600' : undefined}
+            hint={
+              data.hours.utilisation_pct != null
+                ? `${data.hours.utilisation_pct.toFixed(0)}% of ${data.hours.estimated.toFixed(0)} h estimated` +
+                  (data.hours.pending > 0 ? `, ${data.hours.pending.toFixed(1)} h awaiting approval` : '')
+                : 'No task estimates yet'
+            }
+          />
+        )}
       </div>
 
       <Card>
