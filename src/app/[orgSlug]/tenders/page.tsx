@@ -14,8 +14,22 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { format } from 'date-fns';
 import type { CreateTenderInput } from '@/lib/api/tenders';
 import { formatCompact } from '@/lib/utils';
+import { TenderPipeline } from '@/components/tenders/pipeline';
 
-const STATUS_TABS = ['all', 'draft', 'evaluating', 'submitted', 'awarded', 'lost', 'cancelled'] as const;
+const STATUS_TABS = [
+  'all',
+  'draft',
+  'evaluating',
+  'preparing',
+  'submitted',
+  'under_review',
+  'shortlisted',
+  'interview',
+  'awarded',
+  'lost',
+  'no_go',
+  'cancelled',
+] as const;
 type StatusTab = (typeof STATUS_TABS)[number];
 
 function CreateTenderModal({
@@ -237,6 +251,14 @@ export default function TendersPage() {
         </div>
       )}
 
+      {metrics && (
+        <TenderPipeline
+          metrics={metrics}
+          activeStatus={statusFilter}
+          onSelect={(s) => setActiveTab((cur) => (cur === s ? 'all' : (s as StatusTab)))}
+        />
+      )}
+
       {/* Status tabs */}
       <div className="flex gap-1 border-b border-border overflow-x-auto">
         {STATUS_TABS.map((tab) => (
@@ -249,7 +271,7 @@ export default function TendersPage() {
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            {tab}
+            {tab === 'no_go' ? 'No-go' : tab.replace(/_/g, ' ')}
           </button>
         ))}
       </div>

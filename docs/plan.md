@@ -36,13 +36,13 @@
 ### ❌ Financials & Billing → **finance-service** / **erp**
 - **Redirects To**: Respective service dashboards.
 - **Why**: Project billing, invoicing, and payroll are handled by the finance and ERP services.
-- **Update 2026-09-27:** projects-ui will show a read-mostly Financials tab (EVM, budget vs actual, committed vs actual) and edit the project budget through projects-api, which proxies to treasury. Treasury remains the owner of the budget data.
+- **Update 2026-09-27:** projects-ui shows a read-mostly Financials tab (EVM, budget vs actual, committed vs actual) and edit the project budget through projects-api, which proxies to treasury. Treasury remains the owner of the budget data.
 
 ---
 
 ## Roadmap
 
-**Status (verified against code 2026-09-27):** Sprint 1 done; Sprint 2 partially done; Sprint 3 planned. Also shipped outside this roadmap: tenders (list, detail, committees, evaluations), project team, milestones and Gantt pages. Project financials, EVM, portfolio and tender pipeline are In progress (plan budgets-planning-projects-bi-2026-09-27). Open items: [backlog.md](backlog.md).
+**Status (verified against code 2026-09-28):** Sprints 1 to 3 done. Also shipped outside this roadmap: tenders (list, detail, committees, evaluations, pipeline), project team, milestones, Gantt, project financials (EVM), portfolio and time pages. Open items: [backlog.md](backlog.md).
 
 ### Sprint 1: Foundation & SSO
 - [x] Project scaffolding with Next.js 15.
@@ -51,10 +51,10 @@
 
 ### Sprint 2: Task Management
 - [x] Kanban board implementation (tasks page).
-- [ ] Task detail view with comments and attachments. A `useComments` hook exists but no page uses it; there is no task detail page.
+- [x] Task detail view (`/projects/[id]/tasks/[taskId]`): edit fields, comments (add, edit and delete your own), attachments, dependencies and the task's activity. Task titles on the board and list link to it.
 - [x] Milestone tracking.
 
 ### Sprint 3: Collaboration & Reporting
-- [ ] Real-time activity feed (the API has activity routes; the UI does not show them).
-- [ ] Project status reports.
-- [ ] Time tracking interface. Hours will come from ERP timesheets, not a projects time log.
+- [x] Activity feed on the project overview and task detail pages, refreshed every 30 seconds (projects-api has no push channel yet). The overview also gained a project discussion thread and a files list.
+- [x] Project status reports (`/projects/[id]/report`): health, progress, work completed, overdue and due soon, milestones, budget and hours (with Budget Tracking) and recent activity over the last 7, 14 or 30 days. Prints to PDF and copies as plain text.
+- [x] Time tracking view (`/time`, Budget Tracking): hours logged on ERP timesheets against task estimates per project, with pending hours and an overrun flag. Time is logged in ERP; set `NEXT_PUBLIC_ERP_UI_URL` to link there.

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { Plus, List, LayoutGrid } from 'lucide-react';
@@ -130,10 +131,20 @@ function CreateTaskModal({
   );
 }
 
-function KanbanCard({ task, onStatusChange }: { task: Task; onStatusChange: (id: string, status: string) => void }) {
+function KanbanCard({
+  task,
+  href,
+  onStatusChange,
+}: {
+  task: Task;
+  href: string;
+  onStatusChange: (id: string, status: string) => void;
+}) {
   return (
     <div className="rounded-md border border-border bg-white p-3 shadow-sm space-y-2">
-      <p className="text-sm font-medium">{task.title}</p>
+      <Link href={href} className="block text-sm font-medium hover:underline">
+        {task.title}
+      </Link>
       <div className="flex items-center justify-between gap-2">
         <Badge status={task.priority} />
         {task.due_date && (
@@ -167,6 +178,7 @@ export default function TasksPage() {
   const updateTask = useUpdateTask(orgSlug, projectId);
 
   const tasks = data?.data ?? [];
+  const taskHref = (id: string) => `/${orgSlug}/projects/${projectId}/tasks/${id}`;
 
   function handleCreate(input: CreateTaskInput) {
     createTask.mutate(input, { onSuccess: () => setShowCreate(false) });
@@ -234,7 +246,12 @@ export default function TasksPage() {
                 </div>
                 <div className="space-y-2 min-h-[100px] rounded-md bg-muted/30 p-2">
                   {colTasks.map((task) => (
-                    <KanbanCard key={task.id} task={task} onStatusChange={handleStatusChange} />
+                    <KanbanCard
+                      key={task.id}
+                      task={task}
+                      href={taskHref(task.id)}
+                      onStatusChange={handleStatusChange}
+                    />
                   ))}
                 </div>
               </div>
@@ -258,7 +275,11 @@ export default function TasksPage() {
               <tbody>
                 {tasks.map((task) => (
                   <tr key={task.id} className="border-b border-border last:border-0 hover:bg-accent/30">
-                    <td className="py-3 font-medium">{task.title}</td>
+                    <td className="py-3 font-medium">
+                      <Link href={taskHref(task.id)} className="hover:underline">
+                        {task.title}
+                      </Link>
+                    </td>
                     <td className="py-3"><Badge status={task.status} /></td>
                     <td className="py-3"><Badge status={task.priority} /></td>
                     <td className="py-3 text-muted-foreground">
