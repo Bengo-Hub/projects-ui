@@ -13,7 +13,11 @@ export const SCurveChart = dynamic(() => import('./financial-charts').then((m) =
   ssr: false,
   loading: ChartFallback,
 });
-export const CostBarChart = dynamic(() => import('./financial-charts').then((m) => m.CostBarChart), {
+export const TaskTrendChart = dynamic(() => import('./task-charts').then((m) => m.TaskTrendChart), {
+  ssr: false,
+  loading: ChartFallback,
+});
+export const CostBarChart =dynamic(() => import('./financial-charts').then((m) => m.CostBarChart), {
   ssr: false,
   loading: ChartFallback,
 });

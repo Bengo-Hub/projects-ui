@@ -19,6 +19,15 @@ export function useProjects(orgSlug: string, params?: ListProjectsParams) {
   });
 }
 
+/** Project counts by status across the whole tenant, grouped server side. */
+export function useProjectMetrics(orgSlug: string) {
+  return useQuery({
+    queryKey: [KEY, orgSlug, 'metrics'],
+    queryFn: () => projectsApi.metrics(orgSlug),
+    enabled: !!orgSlug,
+  });
+}
+
 export function useProject(orgSlug: string, id: string) {
   return useQuery({
     queryKey: [KEY, orgSlug, id],

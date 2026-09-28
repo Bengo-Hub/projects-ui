@@ -3,8 +3,10 @@
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { FolderKanban, CheckSquare, FileText, TrendingUp } from 'lucide-react';
-import { useProjects } from '@/hooks/useProjects';
-import { useTenders } from '@/hooks/useTenders';
+import { useProjectMetrics, useProjects } from '@/hooks/useProjects';
+import { useTenderMetrics, useTenders } from '@/hooks/useTenders';
+import { useTaskTrend } from '@/hooks/useTasks';
+import { TaskTrendChart } from '@/components/charts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PageLoading } from '@/components/ui/loading';
@@ -15,18 +17,20 @@ export default function DashboardPage() {
   const params = useParams();
   const orgSlug = (params?.orgSlug as string) ?? '';
 
-  const { data: projectsData, isLoading: projectsLoading, isError: projectsError } = useProjects(orgSlug);
-  const { data: tendersData, isLoading: tendersLoading } = useTenders(orgSlug);
+  // Counts come from grouped metrics endpoints; the lists only feed the five most recent rows.
+  const { data: projectMetrics, isLoading: metricsLoading, isError: projectsError } = useProjectMetrics(orgSlug);
+  const { data: tenderMetrics } = useTenderMetrics(orgSlug);
+  const { data: projectsData } = useProjects(orgSlug, { limit: 5 });
+  const { data: tendersData } = useTenders(orgSlug, { page_size: 5 });
+  const { data: trend = [] } = useTaskTrend(orgSlug, undefined, 6);
 
   const projects = projectsData?.data ?? [];
   const tenders = tendersData?.data ?? [];
+  const byStatus = projectMetrics?.by_status ?? {};
+  const activeProjects = byStatus.active ?? 0;
+  const awardedTenders = tenderMetrics?.by_status?.awarded?.count ?? 0;
 
-  const activeProjects = projects.filter((p) => p.status === 'active').length;
-  const completedProjects = projects.filter((p) => p.status === 'completed').length;
-  const activeTenders = tenders.filter((t) => ['draft', 'evaluating', 'submitted'].includes(t.status)).length;
-  const awardedTenders = tenders.filter((t) => t.status === 'awarded').length;
-
-  if (projectsLoading && tendersLoading) return <PageLoading />;
+  if (metricsLoading) return <PageLoading />;
   if (projectsError) return <ErrorBanner message="Failed to load dashboard data." />;
 
   return (
@@ -45,7 +49,7 @@ export default function DashboardPage() {
                 <FolderKanban className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{projects.length}</p>
+                <p className="text-2xl font-bold">{projectMetrics?.total ?? 0}</p>
                 <p className="text-xs text-muted-foreground">Total Projects</p>
               </div>
             </div>
@@ -71,7 +75,7 @@ export default function DashboardPage() {
                 <FileText className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{tenders.length}</p>
+                <p className="text-2xl font-bold">{tenderMetrics?.total ?? 0}</p>
                 <p className="text-xs text-muted-foreground">Total Tenders</p>
               </div>
             </div>
@@ -111,7 +115,7 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground py-4 text-center">No projects yet</p>
             ) : (
               <div className="space-y-3">
-                {projects.slice(0, 5).map((project) => (
+                {projects.map((project) => (
                   <Link
                     key={project.id}
                     href={`/${orgSlug}/projects/${project.id}`}
@@ -149,7 +153,7 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground py-4 text-center">No tenders yet</p>
             ) : (
               <div className="space-y-3">
-                {tenders.slice(0, 5).map((tender) => (
+                {tenders.map((tender) => (
                   <Link
                     key={tender.id}
                     href={`/${orgSlug}/tenders/${tender.id}`}
@@ -168,6 +172,22 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {/* Task flow */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Task Flow (last 6 months)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {trend.every((m) => !m.created && !m.completed && !m.overdue_at_month_end) ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">No task activity yet</p>
+          ) : (
+            <div className="h-64">
+              <TaskTrendChart data={trend} />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Status breakdown */}
       <Card>
         <CardHeader>
@@ -175,12 +195,7 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4">
-            {[
-              { status: 'active', count: activeProjects },
-              { status: 'on_hold', count: projects.filter((p) => p.status === 'on_hold').length },
-              { status: 'completed', count: completedProjects },
-              { status: 'cancelled', count: projects.filter((p) => p.status === 'cancelled').length },
-            ].map(({ status, count }) => (
+            {['active', 'on_hold', 'completed', 'cancelled'].map((status) => ({ status, count: byStatus[status] ?? 0 })).map(({ status, count }) => (
               <div key={status} className="flex items-center gap-2">
                 <Badge status={status} />
                 <span className="text-sm font-medium">{count}</span>

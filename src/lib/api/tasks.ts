@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Task, GanttTask, PaginatedResponse } from '@/types';
+import type { Task, GanttTask, PaginatedResponse, TaskTrendMonth } from '@/types';
 
 export interface CreateTaskInput {
   title: string;
@@ -39,6 +39,11 @@ export const tasksApi = {
     apiClient.post<void>(`${base(orgSlug, projectId)}/${taskId}/dependencies`, body),
   removeDependency: (orgSlug: string, projectId: string, taskId: string, depId: string) =>
     apiClient.delete<void>(`${base(orgSlug, projectId)}/${taskId}/dependencies/${depId}`),
+  /** Monthly created, completed and overdue-at-month-end counts, tenant wide or for one project. */
+  trend: (orgSlug: string, params?: { project_id?: string; months?: number }) =>
+    apiClient
+      .get<{ data: TaskTrendMonth[] }>(`/api/v1/${orgSlug}/tasks/trend`, params)
+      .then((r) => r.data ?? []),
   gantt: (orgSlug: string, projectId: string) =>
     apiClient.get<GanttTask[]>(`/api/v1/${orgSlug}/projects/${projectId}/gantt`),
 };

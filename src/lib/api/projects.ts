@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Project, PaginatedResponse, ProjectSummary } from '@/types';
+import type { Project, PaginatedResponse, ProjectSummary, ProjectMetrics } from '@/types';
 
 export interface CreateProjectInput {
   name: string;
@@ -27,6 +27,8 @@ function base(orgSlug: string) {
 export const projectsApi = {
   list: (orgSlug: string, params?: ListProjectsParams) =>
     apiClient.get<PaginatedResponse<Project>>(base(orgSlug), params as Record<string, unknown>),
+  metrics: (orgSlug: string) =>
+    apiClient.get<ProjectMetrics>(`${base(orgSlug)}/metrics`),
   get: (orgSlug: string, id: string) =>
     apiClient.get<Project>(`${base(orgSlug)}/${id}`),
   create: (orgSlug: string, body: CreateProjectInput) =>

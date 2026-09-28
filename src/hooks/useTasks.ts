@@ -15,6 +15,16 @@ export function useTasks(orgSlug: string, projectId: string, params?: Record<str
   });
 }
 
+/** Monthly task flow; pass projectId for one project, omit it for the whole tenant. */
+export function useTaskTrend(orgSlug: string, projectId?: string, months = 6) {
+  return useQuery({
+    queryKey: [KEY, orgSlug, 'trend', projectId ?? 'all', months],
+    queryFn: () => tasksApi.trend(orgSlug, { project_id: projectId, months }),
+    enabled: !!orgSlug,
+    staleTime: 5 * 60_000,
+  });
+}
+
 export function useTask(orgSlug: string, projectId: string, id: string) {
   return useQuery({
     queryKey: [KEY, orgSlug, projectId, id],

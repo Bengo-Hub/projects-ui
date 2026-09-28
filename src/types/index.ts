@@ -173,6 +173,20 @@ export interface TenderMetrics {
   awarded_value: number;
 }
 
+/** Project counts by status for the whole tenant (GET /projects/metrics). */
+export interface ProjectMetrics {
+  total: number;
+  by_status: Record<string, number>;
+}
+
+/** One month of task flow (GET /tasks/trend). */
+export interface TaskTrendMonth {
+  month: string; // YYYY-MM
+  created: number;
+  completed: number;
+  overdue_at_month_end: number;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;
