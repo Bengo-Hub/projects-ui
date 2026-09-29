@@ -9,9 +9,18 @@ export interface CreateProjectInput {
   end_date?: string;
   budget?: number;
   currency?: string;
+  /** Partial on update: keys sent as null are removed, keys not sent are kept. */
+  metadata?: Record<string, unknown>;
 }
 
 export type UpdateProjectInput = Partial<CreateProjectInput>;
+
+/** A picker row from the CRM (contacts) or treasury (cost centres). */
+export interface LookupOption {
+  id: string;
+  name: string;
+  detail?: string;
+}
 
 export interface ListProjectsParams {
   status?: string;
@@ -39,4 +48,12 @@ export const projectsApi = {
     apiClient.delete<void>(`${base(orgSlug)}/${id}`),
   summary: (orgSlug: string, id: string) =>
     apiClient.get<ProjectSummary>(`${base(orgSlug)}/${id}/summary`),
+  /** CRM contacts (marketflow) matching q, for the project client picker. */
+  searchContacts: (orgSlug: string, q: string) =>
+    apiClient
+      .get<{ data: LookupOption[] }>(`/api/v1/${orgSlug}/lookups/contacts`, { q, limit: 20 })
+      .then((r) => r.data ?? []),
+  /** The tenant's active treasury cost centres. */
+  costCenters: (orgSlug: string) =>
+    apiClient.get<{ data: LookupOption[] }>(`/api/v1/${orgSlug}/lookups/cost-centers`).then((r) => r.data ?? []),
 };

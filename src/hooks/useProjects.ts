@@ -64,9 +64,12 @@ export function useUpdateProject(orgSlug: string) {
     onSuccess: (_, { id }) => {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug] });
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, id] });
+      // Commercial terms feed the financials view.
+      void qc.invalidateQueries({ queryKey: ['financials', orgSlug] });
       toast.success('Project updated');
     },
-    onError: () => toast.error('Failed to update project'),
+    onError: (e) =>
+      toast.error((e as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to update project'),
   });
 }
 

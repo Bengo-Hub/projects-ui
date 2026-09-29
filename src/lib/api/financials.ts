@@ -71,6 +71,27 @@ export interface ProjectFinancials {
   tasks_overdue: number;
   /** Timesheet hours from ERP against the tasks' estimates; absent when ERP is not reachable. */
   hours?: ProjectHours;
+  commercial: Commercial;
+}
+
+export type BillingType = 'fixed' | 'time_and_materials' | 'non_billable';
+
+/**
+ * The contract side. Fixed price: margin at completion (contract value less the forecast at
+ * completion) and unbilled. Time and materials: margin to date (invoiced less cost).
+ */
+export interface Commercial {
+  billing_type?: BillingType;
+  contract_value?: number;
+  invoiced: number;
+  unbilled?: number;
+  projected_margin?: number;
+  projected_margin_pct?: number;
+  margin_basis?: 'at_completion' | 'to_date';
+  client_id?: string;
+  client_name?: string;
+  cost_center_id?: string;
+  cost_center_name?: string;
 }
 
 export interface ProjectHours {

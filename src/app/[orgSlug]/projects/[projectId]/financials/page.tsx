@@ -13,6 +13,7 @@ import { PageLoading } from '@/components/ui/loading';
 import { ErrorBanner } from '@/components/ui/error-banner';
 import { UPGRADE_URL } from '@/components/subscription/subscription-banner';
 import { formatCurrency } from '@/lib/utils';
+import { CommercialCard } from './commercial-card';
 
 const TREASURY_UI = process.env.NEXT_PUBLIC_TREASURY_UI_URL ?? 'https://books.codevertexafrica.com';
 
@@ -180,6 +181,8 @@ export default function ProjectFinancialsPage() {
           />
         )}
       </div>
+
+      <CommercialCard orgSlug={orgSlug} projectId={projectId} commercial={data.commercial ?? { invoiced: 0 }} currency={cur} />
 
       <Card>
         <CardHeader>
