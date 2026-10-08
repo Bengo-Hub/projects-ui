@@ -18,13 +18,16 @@ function OrgShell({ orgSlug, children }: { orgSlug: string; children: ReactNode 
   return (
     <SubscriptionProvider value={entitlements}>
       <PlatformScopeGuard />
-      <div className="flex h-screen overflow-hidden bg-background">
+      {/* print: variants let a page (the status report) print as one flowing document. */}
+      <div className="flex h-screen overflow-hidden bg-background print:block print:h-auto print:overflow-visible">
         <Sidebar orgSlug={orgSlug} />
-        <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+        <div className="flex flex-1 flex-col overflow-hidden min-w-0 print:overflow-visible">
           <Header orgSlug={orgSlug} />
-          <SubscriptionBanner />
-          <VerifyEmailPrompt />
-          <main className="flex-1 overflow-y-auto p-6 bg-accent/5">
+          <div className="print:hidden">
+            <SubscriptionBanner />
+            <VerifyEmailPrompt />
+          </div>
+          <main className="flex-1 overflow-y-auto p-6 bg-accent/5 print:overflow-visible print:p-0 print:bg-white">
             {children}
           </main>
         </div>

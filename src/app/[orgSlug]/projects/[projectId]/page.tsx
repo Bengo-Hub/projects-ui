@@ -5,12 +5,20 @@ import Link from 'next/link';
 import { CheckSquare, Users, Flag, Calendar, ArrowLeft, Lock } from 'lucide-react';
 import { useFeature } from '@bengo-hub/shared-ui-lib/subscription';
 import { useProject, useProjectSummary } from '@/hooks/useProjects';
+import { useProjectActivities } from '@/hooks/useActivities';
+import { useProjectComments, useCreateProjectComment } from '@/hooks/useComments';
+import { useProjectAttachments, useCreateAttachment, useDeleteAttachment } from '@/hooks/useAttachments';
+import { useMe } from '@/hooks/useMe';
+import { ActivityFeed } from '@/components/collab/activity-feed';
+import { CommentThread } from '@/components/collab/comment-thread';
+import { AttachmentList } from '@/components/collab/attachment-list';
 import { UPGRADE_URL } from '@/components/subscription/subscription-banner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PageLoading } from '@/components/ui/loading';
 import { ErrorBanner } from '@/components/ui/error-banner';
 import { format } from 'date-fns';
+import { hasId } from '@/lib/utils';
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -19,6 +27,13 @@ export default function ProjectDetailPage() {
 
   const { data: project, isLoading, isError } = useProject(orgSlug, projectId);
   const { data: summary } = useProjectSummary(orgSlug, projectId);
+  const { user } = useMe();
+  const activities = useProjectActivities(orgSlug, projectId);
+  const comments = useProjectComments(orgSlug, projectId);
+  const attachments = useProjectAttachments(orgSlug, projectId);
+  const addComment = useCreateProjectComment(orgSlug, projectId);
+  const addAttachment = useCreateAttachment(orgSlug, projectId);
+  const removeAttachment = useDeleteAttachment(orgSlug, projectId);
 
   // Premium tabs gated by plan feature. Tabs without a feature are part of the
   // `project_management` base (already gated at the sidebar/workspace level).
@@ -50,6 +65,7 @@ export default function ProjectDetailPage() {
       feature: 'budget_tracking',
       locked: !hasBudgetTracking,
     },
+    { href: `/${orgSlug}/projects/${projectId}/report`, label: 'Status report' },
   ];
 
   const tasksDone = summary?.completed_tasks ?? 0;
@@ -214,6 +230,56 @@ export default function ProjectDetailPage() {
           </dl>
         </CardContent>
       </Card>
+
+      <div className="grid gap-5 lg:grid-cols-3">
+        <div className="space-y-5 lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Discussion</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CommentThread
+                comments={(comments.data?.data ?? []).filter((c) => !hasId(c.task_id))}
+                isLoading={comments.isLoading}
+                meId={user?.id}
+                orgSlug={orgSlug}
+                projectId={projectId}
+                isAdding={addComment.isPending}
+                onAdd={(content, done) => addComment.mutate({ content }, { onSuccess: done })}
+              />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Files</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AttachmentList
+                items={attachments.data?.data ?? []}
+                isLoading={attachments.isLoading}
+                isAdding={addAttachment.isPending}
+                onAdd={(input, done) => addAttachment.mutate(input, { onSuccess: done })}
+                onRemove={(id) => removeAttachment.mutate(id)}
+              />
+            </CardContent>
+          </Card>
+        </div>
+        <Card className="self-start">
+          <CardHeader>
+            <CardTitle className="text-base">Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ActivityFeed
+              items={activities.data?.data ?? []}
+              isLoading={activities.isLoading}
+              meId={user?.id}
+              orgSlug={orgSlug}
+              projectId={projectId}
+              emptyText="Changes to tasks, milestones, members and files will show here."
+            />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

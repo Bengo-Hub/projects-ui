@@ -29,6 +29,7 @@ export function useCreateProjectComment(orgSlug: string, projectId: string) {
       commentsApi.createOnProject(orgSlug, projectId, input),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
+      void qc.invalidateQueries({ queryKey: ['activities', orgSlug, projectId] });
     },
     onError: () => toast.error('Failed to add comment'),
   });
@@ -53,6 +54,7 @@ export function useUpdateComment(orgSlug: string, projectId: string) {
       commentsApi.update(orgSlug, projectId, id, data),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
+      void qc.invalidateQueries({ queryKey: ['activities', orgSlug, projectId] });
     },
     onError: () => toast.error('Failed to update comment'),
   });
@@ -64,6 +66,7 @@ export function useDeleteComment(orgSlug: string, projectId: string) {
     mutationFn: (id: string) => commentsApi.delete(orgSlug, projectId, id),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
+      void qc.invalidateQueries({ queryKey: ['activities', orgSlug, projectId] });
       toast.success('Comment deleted');
     },
     onError: () => toast.error('Failed to delete comment'),

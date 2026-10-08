@@ -38,7 +38,7 @@ export interface ListTendersParams {
   status?: string;
   priority?: string;
   page?: number;
-  page_size?: number;
+  limit?: number;
 }
 
 function base(orgSlug: string) {

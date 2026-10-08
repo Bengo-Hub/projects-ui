@@ -96,6 +96,19 @@ export interface Activity {
   occurred_at: string;
 }
 
+export interface Attachment {
+  id: string;
+  tenant_id: string;
+  project_id?: string;
+  task_id?: string;
+  file_url: string;
+  file_name: string;
+  file_size: number;
+  mime_type?: string;
+  uploaded_by: string;
+  uploaded_at: string;
+}
+
 export interface Tender {
   id: string;
   tenant_id: string;
@@ -103,7 +116,7 @@ export interface Tender {
   title: string;
   client_name: string;
   source?: string;
-  status: string; // draft, evaluating, submitted, awarded, lost, cancelled
+  status: string; // draft, evaluating, preparing, submitted, under_review, shortlisted, interview, awarded, lost, no_go, cancelled
   priority: string; // low, medium, high, critical
   estimated_value?: number;
   currency: string;
