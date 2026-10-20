@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { User } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { cn } from '@/lib/utils';
-import { useVisibleServices, AppSwitcherGrid, AppSwitcherTrigger, type ServiceKey } from '@bengo-hub/shared-ui-lib/app-switcher';
+import { useVisibleServices, serviceTagsFromAccessToken, AppSwitcherGrid, AppSwitcherTrigger, type ServiceKey } from '@bengo-hub/shared-ui-lib/app-switcher';
 import { AccountPanel } from '@bengo-hub/shared-ui-lib/account-panel';
 
 // projects-ui never wired the shared app-switcher before — this is its first adoption.
@@ -27,12 +27,20 @@ interface HeaderProps {
 }
 
 export default function Header({ orgSlug, className }: HeaderProps) {
-  const { user, logout } = useAuthStore();
+  const { user, logout, session } = useAuthStore();
   const [profileOpen, setProfileOpen] = useState(false);
   const name = user?.email?.split('@')[0] ?? 'Account';
   // The App Store shows every real service to every authenticated user in the tenant — each
   // destination service already enforces its own RBAC + subscription gating on arrival.
-  const services = useVisibleServices({ orgSlug, urls: SERVICE_URLS, canManageLinks: true });
+  // A service outside the plan stays visible as "Not in your plan" with a link to the plans page
+  // (shared-ui-lib default), so tenants discover the rest of the suite without hitting a 403.
+  const services = useVisibleServices({
+    orgSlug,
+    urls: SERVICE_URLS,
+    canManageLinks: true,
+    activeServiceTags: serviceTagsFromAccessToken(session?.accessToken),
+    upgradeUrl: SERVICE_URLS.subscriptions ? `${SERVICE_URLS.subscriptions}/${orgSlug}` : null,
+  });
 
   return (
     <header
