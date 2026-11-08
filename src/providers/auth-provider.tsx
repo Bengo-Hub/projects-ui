@@ -43,8 +43,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAuthCallback = pathname?.includes('/auth');
   // !ready: child effects run before this provider's, so rendering pages before initialize() has set
-  // the token sent their first requests with no token (401, then a retry).
-  const isLoading = (!ready || status === 'loading' || (!!session && status === 'syncing')) && !isAuthCallback;
+  // the token sent their first requests with no token (401, then a retry). 'idle' means no session
+  // and a redirect to sign-in is on its way, so pages are not rendered then either.
+  const isLoading = (!ready || status === 'idle' || status === 'loading' || (!!session && status === 'syncing')) && !isAuthCallback;
 
   if (isLoading) {
     return (
