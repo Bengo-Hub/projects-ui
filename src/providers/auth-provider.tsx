@@ -42,7 +42,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [ready, status, pathname, orgSlug]);
 
   const isAuthCallback = pathname?.includes('/auth');
-  const isLoading = (status === 'loading' || (!!session && status === 'syncing')) && !isAuthCallback;
+  // !ready: child effects run before this provider's, so rendering pages before initialize() has set
+  // the token sent their first requests with no token (401, then a retry).
+  const isLoading = (!ready || status === 'loading' || (!!session && status === 'syncing')) && !isAuthCallback;
 
   if (isLoading) {
     return (
