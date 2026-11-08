@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useParams, usePathname } from 'next/navigation';
 import { apiClient } from '@/lib/api/client';
@@ -14,8 +14,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const params = useParams();
   const orgSlug = params?.orgSlug as string | undefined;
 
+  // `ready` = initialize() has restored any saved session. Deciding to go to SSO before that sent
+  // every full page load through a sign-in round trip, each one opening a new 30-day SSO session.
+  const [ready, setReady] = useState(false);
   useEffect(() => {
-    initialize();
+    let active = true;
+    initialize().finally(() => { if (active) setReady(true); });
+    return () => { active = false; };
   }, [initialize]);
 
   useEffect(() => {
@@ -31,10 +36,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const isAuthPath = pathname?.includes('/auth');
-    if (status === 'idle' && !isAuthPath && orgSlug) {
+    if (ready && status === 'idle' && !isAuthPath && orgSlug) {
       void useAuthStore.getState().redirectToSSO(orgSlug, window.location.href);
     }
-  }, [status, pathname, orgSlug]);
+  }, [ready, status, pathname, orgSlug]);
 
   const isAuthCallback = pathname?.includes('/auth');
   const isLoading = (status === 'loading' || (!!session && status === 'syncing')) && !isAuthCallback;
