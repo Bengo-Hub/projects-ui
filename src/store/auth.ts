@@ -83,7 +83,9 @@ export const useAuthStore = create<AuthState>()(
           }
         }
         try {
-          const freshUser = await fetchProfile();
+          // Pass the token: fetchProfile falls back to localStorage.accessToken, which this app never
+          // sets, so without it /auth/me went out unauthenticated and the profile never loaded.
+          const freshUser = await fetchProfile(renewedOnLoad ?? session.accessToken);
           apiClient.setTenantInfo(freshUser.tenant_id, freshUser.tenant_slug);
           apiClient.setPlatformOwner(freshUser.isPlatformOwner);
           set({ user: freshUser, status: 'authenticated', lastAuthenticatedAt: Date.now() });
@@ -148,7 +150,7 @@ export const useAuthStore = create<AuthState>()(
           let attempts = 0;
           while (attempts < 5) {
             try {
-              const user = await fetchProfile();
+              const user = await fetchProfile(session.accessToken);
               apiClient.setTenantInfo(user.tenant_id, user.tenant_slug);
               apiClient.setPlatformOwner(user.isPlatformOwner);
               if (typeof window !== 'undefined' && user.email) {
@@ -182,7 +184,7 @@ export const useAuthStore = create<AuthState>()(
 
       fetchUser: async () => {
         try {
-          const user = await fetchProfile();
+          const user = await fetchProfile(get().session?.accessToken);
           set({ user });
         } catch {
           // silently fail
