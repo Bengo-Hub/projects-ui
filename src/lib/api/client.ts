@@ -42,8 +42,9 @@ class ApiClient {
     if (axiosError.response?.status === 401 && !axiosError.config?._retried) {
       if (this.accessToken) {
         try {
+          const sent = String(axiosError.config?.headers?.Authorization ?? '').replace(/^Bearer\s+/i, '');
           const { refreshAccessToken } = await import('@/lib/auth/token-refresh');
-          const newToken = await refreshAccessToken();
+          const newToken = await refreshAccessToken(sent || this.accessToken);
           if (newToken && axiosError.config) {
             this.accessToken = newToken;
             axiosError.config._retried = true;
@@ -56,6 +57,10 @@ class ApiClient {
         }
         this.on401Callback?.();
       }
+    } else if (axiosError.response?.status === 401 && axiosError.config?._retried) {
+      // Even a freshly renewed token was refused: the session is unusable, so send the person
+      // to sign in instead of leaving a page where every save fails.
+      this.on401Callback?.();
     }
 
     if (axiosError.response?.status === 403) {
