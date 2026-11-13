@@ -85,6 +85,12 @@ class ApiClient {
   public get<T>(url: string, params?: Record<string, unknown>): Promise<T> {
     return this.instance.get<T>(url, { params }).then((r: AxiosResponse<T>) => r.data);
   }
+  /** A binary download (a PDF report, for example) with the same auth and tenant headers. */
+  public getBlob(url: string, params?: Record<string, unknown>): Promise<Blob> {
+    return this.instance
+      .get<Blob>(url, { params, responseType: 'blob', timeout: 60000 })
+      .then((r: AxiosResponse<Blob>) => r.data);
+  }
   public post<T>(url: string, data?: unknown): Promise<T> {
     return this.instance.post<T>(url, data).then((r: AxiosResponse<T>) => r.data);
   }

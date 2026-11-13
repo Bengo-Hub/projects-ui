@@ -20,6 +20,16 @@ All In progress (plan budgets-planning-projects-bi-2026-09-27, Phase 6). The Fin
 - Tender pipeline view. Source: budgets plan.
 - Add recharts (same version as treasury-ui). Source: budgets plan.
 
+## QA and acceptance
+
+Screens built 13 November 2026 (see plan.md, "QA and acceptance"). Still open, each waiting on its backend or shared piece:
+
+- Signing with the stored profile signature, and uploading a signed scan. Waits on auth-api signatures with consent, projects-api `qa_signatures` and shared-ui-lib `SignaturePad`. Today a signer prints and signs the report. Source: QA plan sections 5 and 6.
+- Evidence upload on a verdict. Waits on the shared upload field and the projects-api evidence route (`evidence_keys` exists, no route yet). Source: QA plan section 7.
+- Results history view (`GET results?history=true` is wired in the API client, no screen yet). Source: QA plan section 3.
+- Live board updates. The board refreshes on focus and by hand; projects-api has no event stream for QA yet. Source: webhooks over polling rule.
+- Template version diff and a criteria reorder by drag. Source: QA plan section 2.
+
 ## Tasks and collaboration
 
 - Task detail view with comments and attachments (hook exists, no page). Source: plan.md Sprint 2.

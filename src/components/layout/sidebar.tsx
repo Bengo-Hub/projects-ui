@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FolderKanban, FileText, LayoutDashboard, ChevronRight, Lock, PieChart } from 'lucide-react';
+import { FolderKanban, FileText, LayoutDashboard, ChevronRight, Lock, PieChart, ClipboardCheck } from 'lucide-react';
 import { useFeature } from '@bengo-hub/shared-ui-lib/subscription';
 import { cn } from '@/lib/utils';
 import { UPGRADE_URL } from '@/components/subscription/subscription-banner';
+import { useQAPermissions } from '@/hooks/useQA';
 
 interface NavItem {
   href: string;
@@ -13,6 +14,8 @@ interface NavItem {
   icon: React.ElementType;
   /** Subscription feature code — shows an upgrade lock badge when not in the tenant's plan. */
   subFeature?: string;
+  /** Hidden unless the user can view QA (projects.qa.view, or run or manage). */
+  needsQA?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -20,6 +23,7 @@ const navItems: NavItem[] = [
   { href: 'projects', label: 'Projects', icon: FolderKanban, subFeature: 'project_management' },
   { href: 'portfolio', label: 'Portfolio', icon: PieChart, subFeature: 'budget_tracking' },
   { href: 'tenders', label: 'Tenders', icon: FileText, subFeature: 'project_management' },
+  { href: 'qa', label: 'Acceptance', icon: ClipboardCheck, subFeature: 'project_management', needsQA: true },
 ];
 
 interface SidebarProps {
@@ -36,6 +40,8 @@ export default function Sidebar({ orgSlug }: SidebarProps) {
     project_management: hasProjectManagement,
     budget_tracking: hasBudgetTracking,
   };
+  const { canView: canViewQA } = useQAPermissions();
+  const visibleItems = navItems.filter((i) => !i.needsQA || canViewQA);
 
   return (
     <aside className="w-64 bg-card border-r border-border flex flex-col shrink-0">
@@ -44,7 +50,7 @@ export default function Sidebar({ orgSlug }: SidebarProps) {
         <p className="text-xs text-muted-foreground truncate">{orgSlug}</p>
       </div>
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navItems.map(({ href, label, icon: Icon, subFeature }) => {
+        {visibleItems.map(({ href, label, icon: Icon, subFeature }) => {
           const fullHref = `/${orgSlug}/${href}`;
           const active = pathname.startsWith(fullHref);
           const locked = !!subFeature && !enabled[subFeature];

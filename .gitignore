@@ -6,4 +6,6 @@ out/
 *.pem
 *.key
 *.tsbuildinfo
+test-results/
+playwright-report/
 
