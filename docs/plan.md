@@ -106,8 +106,29 @@ hand and checked by the API once the catalogue is on.
 ### Tests
 
 - `pnpm test`: node tests for the pure helpers (`node-tests/qa-logic.test.ts`): permissions,
-  verdict checks, drafts, the accept reason, CSV and JSON import.
+  verdict checks, drafts, the accept reason, CSV and JSON import; and the Security keys helpers
+  (`node-tests/field-keys.test.ts`).
 - `pnpm test:e2e`: Playwright with mocked APIs at 390 px and 1280 px (`e2e/qa-invitee.spec.ts`,
   `e2e/qa-tenant.spec.ts`, mocks in `e2e/qa-mocks.ts`). Build first; the config runs `pnpm start`.
 
 Note: `/qa` is a top-level route, so an organisation slug `qa` would be shadowed by it.
+
+## Security keys (15 November 2026)
+
+`/{orgSlug}/platform/security` is the platform owner's page for projects-api's field encryption
+keys. The sidebar shows it under "Platform" only when `isPlatformOwner` is true, the page refuses
+anyone else, and projects-api checks again on every route.
+
+- Key health: whether the root key is set and its fingerprint, the current data key and its
+  fingerprint, the last backup (when and by whom), the last rotation, how many sealed values exist
+  and how many are on the current key, the rotation state, and each key with its value count. While
+  a rotation re-seals, the card refreshes every 5 seconds.
+- Download a backup and Rotate the key both start with a fresh email code. The page asks auth-api to
+  email me a code, trades it for a one-time `otp_token` and sends that with the request
+  (`src/lib/api/field-keys.ts`). The backup comes back as a file and goes straight to a download;
+  nothing of it is shown on screen. Rotate is off while a re-seal runs.
+- The backup holds the data keys, not the root `FIELD_ENCRYPTION_KEY`; the page says so.
+
+Pure helpers live in `src/lib/security/field-keys.ts` with node tests in
+`node-tests/field-keys.test.ts`. The API side is in projects-api `docs/api.md` ("Platform: field
+keys") and `docs/architecture.md` ("Field encryption keys").

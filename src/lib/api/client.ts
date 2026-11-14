@@ -91,6 +91,15 @@ class ApiClient {
       .get<Blob>(url, { params, responseType: 'blob', timeout: 60000 })
       .then((r: AxiosResponse<Blob>) => r.data);
   }
+  /** A POST whose answer is a file; returns it with its Content-Disposition header. */
+  public postBlob(url: string, data?: unknown): Promise<{ blob: Blob; disposition: string | null }> {
+    return this.instance
+      .post<Blob>(url, data, { responseType: 'blob', timeout: 60000 })
+      .then((r: AxiosResponse<Blob>) => ({
+        blob: r.data,
+        disposition: (r.headers['content-disposition'] as string | undefined) ?? null,
+      }));
+  }
   public post<T>(url: string, data?: unknown): Promise<T> {
     return this.instance.post<T>(url, data).then((r: AxiosResponse<T>) => r.data);
   }

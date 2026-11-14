@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FolderKanban, FileText, LayoutDashboard, ChevronRight, Lock, PieChart, ClipboardCheck } from 'lucide-react';
+import { FolderKanban, FileText, LayoutDashboard, ChevronRight, Lock, PieChart, ClipboardCheck, KeyRound } from 'lucide-react';
+import { useMe } from '@/hooks/useMe';
 import { useFeature } from '@bengo-hub/shared-ui-lib/subscription';
 import { cn } from '@/lib/utils';
 import { UPGRADE_URL } from '@/components/subscription/subscription-banner';
@@ -42,6 +43,10 @@ export default function Sidebar({ orgSlug }: SidebarProps) {
   };
   const { canView: canViewQA } = useQAPermissions();
   const visibleItems = navItems.filter((i) => !i.needsQA || canViewQA);
+  // Platform settings: the platform owner only (a tenant admin or superuser never sees them).
+  const { user } = useMe();
+  const isPlatformOwner = !!user?.isPlatformOwner;
+  const securityHref = `/${orgSlug}/platform/security`;
 
   return (
     <aside className="w-64 bg-card border-r border-border flex flex-col shrink-0">
@@ -92,6 +97,23 @@ export default function Sidebar({ orgSlug }: SidebarProps) {
             </Link>
           );
         })}
+        {isPlatformOwner && (
+          <div className="pt-4">
+            <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Platform</p>
+            <Link
+              href={securityHref}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                pathname.startsWith(securityHref)
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              )}
+            >
+              <KeyRound className="h-4 w-4 shrink-0" />
+              <span className="flex-1">Security keys</span>
+            </Link>
+          </div>
+        )}
       </nav>
     </aside>
   );

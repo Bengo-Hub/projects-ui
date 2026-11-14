@@ -15,8 +15,8 @@ import { apiClient } from '@/lib/api/client';
  * administration is confined to `/{orgSlug}/platform/*`. Leaving `/platform`
  * must clear the drill-in.
  *
- * projects-ui has NO `/platform` route and NO `?tenantId=` cross-tenant
- * selector today. The only platform-scoped lever on the API client is
+ * projects-ui's only `/platform` page is Security keys (platform-wide, no
+ * tenant headers needed) and there is NO `?tenantId=` cross-tenant selector. The only platform-scoped lever on the API client is
  * `setPlatformOwner()`, which (when true) suppresses the `X-Tenant-*` headers.
  * The auth store eagerly sets that lever true for the platform owner on login,
  * which would drop the own-tenant headers on EVERY business page. This guard
