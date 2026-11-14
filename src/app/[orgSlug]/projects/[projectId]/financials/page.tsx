@@ -131,7 +131,7 @@ export default function ProjectFinancialsPage() {
           <div>
             <h1 className="text-2xl font-bold">{data.name}: financials</h1>
             <p className="text-sm text-muted-foreground">
-              Budget, cost and earned value. Costs come from the books in Finance, progress from this project's tasks.
+              Budget, cost and earned value. Costs come from the books in Finance, progress from this project&apos;s tasks.
             </p>
           </div>
           <span className={`rounded-full border px-3 py-1 text-sm font-semibold ${healthStyle[evm.health]}`} title={evm.health_reason}>

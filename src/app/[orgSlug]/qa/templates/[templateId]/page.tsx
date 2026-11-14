@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { AlertTriangle, ArrowLeft, Pencil, Plus, Trash2, Upload } from 'lucide-react';
@@ -53,12 +53,16 @@ function TemplateSettings({ orgSlug, template, editable }: { orgSlug: string; te
   const [status, setStatus] = useState<QATemplateStatus>(template.status ?? 'draft');
   const [rule, setRule] = useState<Required<QAPassRule>>(ruleOf(template));
 
-  useEffect(() => {
+  // A refreshed template resets the form. Adjusting state during render (not in an effect) is
+  // React's pattern for this: it avoids a second render with stale values.
+  const [shown, setShown] = useState(template);
+  if (shown !== template) {
+    setShown(template);
     setName(template.name);
     setTag(template.service_tag ?? '');
     setStatus(template.status ?? 'draft');
     setRule(ruleOf(template));
-  }, [template]);
+  }
 
   function toggleSeverity(s: number) {
     setRule((r) => ({

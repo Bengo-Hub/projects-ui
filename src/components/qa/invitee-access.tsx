@@ -19,7 +19,10 @@ export function InviteeAccess({ code, tenantSlug }: { code: string; tenantSlug?:
   const grant = useQAGrant(code);
   const session = useAuthStore((s) => s.session);
   const user = useAuthStore((s) => s.user);
-  const signedIn = !!session?.accessToken && !!user?.email && (!session.expiresAt || Date.parse(session.expiresAt) > Date.now());
+  // The time is read once when the panel mounts (a pure render cannot call Date.now()); an expired
+  // session is refused by the API anyway.
+  const [now] = useState(() => Date.now());
+  const signedIn = !!session?.accessToken && !!user?.email && (!session.expiresAt || Date.parse(session.expiresAt) > now);
 
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [email, setEmail] = useState('');

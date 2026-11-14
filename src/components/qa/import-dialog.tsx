@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { IMPORT_COLUMNS, MAX_CRITERIA_PER_CALL, parseCriteriaImport } from '@/lib/qa/logic';
 import { Field, inputClass } from './fields';
@@ -20,12 +20,15 @@ export function ImportDialog({ open, onOpenChange, platform, pending, onImport }
   const [text, setText] = useState('');
   const [checked, setChecked] = useState(false);
 
-  useEffect(() => {
+  // Each opening starts empty; adjusted during render, React's pattern for state that follows props.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
     if (open) {
       setText('');
       setChecked(false);
     }
-  }, [open]);
+  }
 
   const parsed = useMemo(() => (checked ? parseCriteriaImport(text, platform) : null), [checked, text, platform]);
 

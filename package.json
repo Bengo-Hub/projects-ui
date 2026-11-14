@@ -6,7 +6,7 @@
     "dev": "next dev --port 3005",
     "build": "next build",
     "start": "next start --port 3005",
-    "lint": "next lint",
+    "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "test": "node --experimental-strip-types --test node-tests/**/*.test.ts",
     "test:e2e": "playwright test"
@@ -29,7 +29,7 @@
     "clsx": "2.1.1",
     "date-fns": "4.1.0",
     "lucide-react": "0.511.0",
-    "next": "16.3.8",
+    "next": "16.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "recharts": "^3.8.1",
@@ -44,10 +44,18 @@
     "@types/react-dom": "19.3.0",
     "autoprefixer": "10.4.21",
     "eslint": "9.27.0",
-    "eslint-config-next": "16.3.8",
+    "eslint-config-next": "16.4.6",
     "postcss": "8.5.3",
     "tailwindcss": "3.4.17",
     "typescript": "5.8.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "brace-expansion@<1.1.21": "^1.1.21",
+      "brace-expansion@>=5.0.0 <5.0.12": "^5.0.12",
+      "follow-redirects@<1.16.2": "^1.16.2",
+      "source-map-js@<1.2.2": "^1.2.2"
+    }
   },
   "engines": {
     "node": ">=20.0.0",

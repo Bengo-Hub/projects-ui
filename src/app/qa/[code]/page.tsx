@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
+
+const noSubscribe = () => () => {};
 import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { FileText, LogOut } from 'lucide-react';
@@ -71,8 +73,8 @@ export default function InviteePage() {
   const params = useParams();
   const code = (params?.code as string) ?? '';
   // The saved sign-in lives in localStorage; render after mount so server and client agree.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // false on the server and during hydration, true afterwards, with no effect and no extra render.
+  const mounted = useSyncExternalStore(noSubscribe, () => true, () => false);
 
   const info = useQAAccessInfo(code);
   const session = useQAInviteeSession(code);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useProjects } from '@/hooks/useProjects';
 import { useMilestones } from '@/hooks/useMilestones';
@@ -110,12 +110,16 @@ export function CriterionDialog({ open, onOpenChange, orgSlug, serviceTag, platf
   const [form, setForm] = useState<QACriterionInput>(() => fromCriterion(initial));
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Opening the dialog (or opening it on another criterion) starts from that criterion; adjusted
+  // during render, React's pattern for state that follows props.
+  const [shown, setShown] = useState({ open, initial });
+  if (shown.open !== open || shown.initial !== initial) {
+    setShown({ open, initial });
     if (open) {
       setForm(fromCriterion(initial));
       setError(null);
     }
-  }, [open, initial]);
+  }
 
   const set = <K extends keyof QACriterionInput>(k: K, v: QACriterionInput[K]) => setForm((f) => ({ ...f, [k]: v }));
 

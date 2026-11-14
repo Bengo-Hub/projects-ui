@@ -115,7 +115,7 @@ export default function PortfolioPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Portfolio</h1>
-          <p className="text-sm text-muted-foreground">Every project's budget, spend and earned value, worst health first on each page.</p>
+          <p className="text-sm text-muted-foreground">Every project&apos;s budget, spend and earned value, worst health first on each page.</p>
         </div>
         <select
           value={status}
