@@ -39,6 +39,14 @@ class ApiClient {
       config?: InternalAxiosRequestConfig & { _retried?: boolean };
     };
 
+    // The service auth/me can answer 401 while the user is still being provisioned (JIT); it never
+    // signs anyone out (SSO guide step 5).
+    const isServiceMe = /\/auth\/me$/.test(axiosError.config?.url ?? '');
+
+    if (axiosError.response?.status === 401 && isServiceMe) {
+      return Promise.reject(error);
+    }
+
     if (axiosError.response?.status === 401 && !axiosError.config?._retried) {
       if (this.accessToken) {
         try {

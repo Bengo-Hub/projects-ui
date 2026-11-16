@@ -8,26 +8,29 @@ import {
   type UpdateProjectInput,
   type ListProjectsParams,
 } from '@/lib/api/projects';
+import { onMutationError } from '@/lib/api/errors';
 
 const KEY = 'projects';
 
-export function useProjects(orgSlug: string, params?: ListProjectsParams) {
+/** The projects the caller may see: every project with projects.projects.manage, else their own. */
+export function useProjects(orgSlug: string, params?: ListProjectsParams, enabled = true) {
   return useQuery({
     queryKey: [KEY, orgSlug, params],
     queryFn: () => projectsApi.list(orgSlug, params),
-    enabled: !!orgSlug,
+    enabled: enabled && !!orgSlug,
   });
 }
 
-/** Project counts by status across the whole tenant, grouped server side. */
-export function useProjectMetrics(orgSlug: string) {
+/** Project counts by status over the projects the caller may see, grouped server side. */
+export function useProjectMetrics(orgSlug: string, enabled = true) {
   return useQuery({
     queryKey: [KEY, orgSlug, 'metrics'],
     queryFn: () => projectsApi.metrics(orgSlug),
-    enabled: !!orgSlug,
+    enabled: enabled && !!orgSlug,
   });
 }
 
+/** One project with its members and milestones (tasks come from the tasks list). */
 export function useProject(orgSlug: string, id: string) {
   return useQuery({
     queryKey: [KEY, orgSlug, id],
@@ -52,7 +55,7 @@ export function useCreateProject(orgSlug: string) {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug] });
       toast.success('Project created');
     },
-    onError: () => toast.error('Failed to create project'),
+    onError: onMutationError('Failed to create project'),
   });
 }
 
@@ -68,8 +71,7 @@ export function useUpdateProject(orgSlug: string) {
       void qc.invalidateQueries({ queryKey: ['financials', orgSlug] });
       toast.success('Project updated');
     },
-    onError: (e) =>
-      toast.error((e as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to update project'),
+    onError: onMutationError('Failed to update project'),
   });
 }
 
@@ -81,6 +83,6 @@ export function useDeleteProject(orgSlug: string) {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug] });
       toast.success('Project deleted');
     },
-    onError: () => toast.error('Failed to delete project'),
+    onError: onMutationError('Failed to delete project'),
   });
 }

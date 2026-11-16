@@ -13,6 +13,10 @@ import { ErrorBanner } from '@/components/ui/error-banner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/common/page-header';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
+import { ProjectNotFound } from '@/components/common/not-found-state';
+import { useServicePermissions } from '@/hooks/usePermissions';
+import { isNotFound } from '@/lib/api/errors';
+import { PERMS } from '@/lib/auth/permissions';
 import type { AddMemberInput } from '@/lib/api/members';
 import type { ProjectMember } from '@/types';
 
@@ -88,14 +92,16 @@ export default function TeamPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [removing, setRemoving] = useState<ProjectMember | null>(null);
 
-  const { data, isLoading, isError } = useMembers(orgSlug, projectId);
+  const { data, isLoading, isError, error } = useMembers(orgSlug, projectId);
   const addMember = useAddMember(orgSlug, projectId);
   const removeMember = useRemoveMember(orgSlug, projectId);
+  const { can } = useServicePermissions();
+  const canManage = can(PERMS.membersManage);
 
   const members = data?.data ?? [];
 
-  const columns = useMemo<DataTableColumn<ProjectMember>[]>(
-    () => [
+  const columns = useMemo<DataTableColumn<ProjectMember>[]>(() => {
+    const base: DataTableColumn<ProjectMember>[] = [
       {
         key: 'user_id',
         header: 'User ID',
@@ -110,6 +116,10 @@ export default function TeamPage() {
         render: (m) => <span className="rounded-md bg-secondary px-2 py-0.5 text-xs font-medium capitalize">{m.role_code}</span>,
       },
       { key: 'joined_at', header: 'Joined', sortable: true, render: (m) => <span className="text-muted-foreground">{formatDate(m.joined_at)}</span> },
+    ];
+    if (!canManage) return base;
+    return [
+      ...base,
       {
         key: 'actions',
         header: <span className="sr-only">Actions</span>,
@@ -130,16 +140,23 @@ export default function TeamPage() {
           </button>
         ),
       },
-    ],
-    [],
-  );
+    ];
+  }, [canManage]);
 
   function handleAdd(input: AddMemberInput) {
     addMember.mutate(input, { onSuccess: () => setShowAdd(false) });
   }
 
   if (isLoading) return <PageLoading />;
+  if (isNotFound(error)) return <ProjectNotFound orgSlug={orgSlug} />;
   if (isError) return <ErrorBanner message="Failed to load team members." />;
+
+  const addButton = canManage ? (
+    <Button size="sm" onClick={() => setShowAdd(true)}>
+      <Plus className="h-4 w-4" />
+      Add member
+    </Button>
+  ) : undefined;
 
   return (
     <div className="space-y-5">
@@ -147,25 +164,15 @@ export default function TeamPage() {
         title={`Team (${members.length})`}
         back={{ href: `/${orgSlug}/projects/${projectId}`, label: 'Project' }}
         className="mb-0"
-        actions={
-          <Button size="sm" onClick={() => setShowAdd(true)}>
-            <Plus className="h-4 w-4" />
-            Add member
-          </Button>
-        }
+        actions={addButton}
       />
 
       {members.length === 0 ? (
         <EmptyState
           icon={Users}
           title="No team members"
-          description="Add people to collaborate on this project."
-          action={
-            <Button size="sm" onClick={() => setShowAdd(true)}>
-              <Plus className="h-4 w-4" />
-              Add member
-            </Button>
-          }
+          description={canManage ? 'Add people to collaborate on this project.' : 'Nobody has been added to this project yet.'}
+          action={addButton}
         />
       ) : (
         <DataTable columns={columns} rows={members} rowKey={(m) => m.id} gridLines="rows" storageKey="projects-team-columns" />

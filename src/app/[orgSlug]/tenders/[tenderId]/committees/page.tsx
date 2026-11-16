@@ -17,6 +17,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
 import { PageHeader } from '@/components/common/page-header';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
+import { useServicePermissions } from '@/hooks/usePermissions';
+import { PERMS } from '@/lib/auth/permissions';
 
 const COMMITTEE_ROLES: ComboboxOption[] = [
   { value: 'chair', label: 'Chair' },
@@ -31,6 +33,9 @@ export default function CommitteesPage() {
 
   const { data, isLoading, isError } = useTenderCommittees(orgSlug, tenderId);
   const createCommittee = useCreateCommittee(orgSlug, tenderId);
+  const { can } = useServicePermissions();
+  // Committees and their members are tender management (projects.tenders.manage).
+  const canManage = can(PERMS.tendersManage);
 
   const [newCommitteeName, setNewCommitteeName] = useState('');
   const [addMemberState, setAddMemberState] = useState<Record<string, { userId: string; role: string }>>({});
@@ -53,6 +58,7 @@ export default function CommitteesPage() {
       <PageHeader title="Committees" back={{ href: `/${orgSlug}/tenders/${tenderId}`, label: 'Tender' }} className="mb-0" />
 
       {/* Create committee */}
+      {canManage && (
       <Card>
         <CardContent className="pt-5">
           <form onSubmit={handleCreateCommittee} className="flex gap-2">
@@ -70,6 +76,7 @@ export default function CommitteesPage() {
           </form>
         </CardContent>
       </Card>
+      )}
 
       {committees.length === 0 ? (
         <EmptyState
@@ -85,6 +92,7 @@ export default function CommitteesPage() {
               orgSlug={orgSlug}
               tenderId={tenderId}
               committee={committee}
+              canManage={canManage}
               addMemberState={addMemberState}
               setAddMemberState={setAddMemberState}
             />
@@ -99,12 +107,14 @@ function CommitteeCard({
   orgSlug,
   tenderId,
   committee,
+  canManage,
   addMemberState,
   setAddMemberState,
 }: {
   orgSlug: string;
   tenderId: string;
   committee: { id: string; name: string; edges?: { members?: Array<{ id: string; user_id: string; role: string }> } };
+  canManage: boolean;
   addMemberState: Record<string, { userId: string; role: string }>;
   setAddMemberState: React.Dispatch<React.SetStateAction<Record<string, { userId: string; role: string }>>>;
 }) {
@@ -135,14 +145,16 @@ function CommitteeCard({
                 <span className="font-mono text-xs text-muted-foreground">{m.user_id}</span>
                 <div className="flex items-center gap-2">
                   <span className="capitalize text-xs">{m.role}</span>
-                  <button
-                    type="button"
-                    onClick={() => setRemoving(m.user_id)}
-                    aria-label="Remove member"
-                    className="rounded p-1 text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => setRemoving(m.user_id)}
+                      aria-label="Remove member"
+                      className="rounded p-1 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -151,6 +163,7 @@ function CommitteeCard({
           <p className="text-xs text-muted-foreground">No members yet</p>
         )}
 
+        {canManage && (
         <form onSubmit={handleAddMember} className="flex flex-col gap-2 pt-1 sm:flex-row">
           <input
             type="text"
@@ -172,6 +185,7 @@ function CommitteeCard({
             <Plus className="h-3.5 w-3.5" />
           </Button>
         </form>
+        )}
         <ConfirmDialog
           open={!!removing}
           onOpenChange={(o) => !o && setRemoving(null)}

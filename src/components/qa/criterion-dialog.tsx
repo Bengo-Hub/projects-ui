@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { useProjects } from '@/hooks/useProjects';
 import { useMilestones } from '@/hooks/useMilestones';
 import { useTasks } from '@/hooks/useTasks';
+import { useServicePermissions } from '@/hooks/usePermissions';
+import { PERMS } from '@/lib/auth/permissions';
 import { SUBJECT_LABELS, toCriterionInput, WEIGHT_LABELS } from '@/lib/qa/logic';
 import { Field, inputClass } from './fields';
 import { FeaturePicker } from './feature-picker';
@@ -58,13 +60,15 @@ function WorkItemPicker({
   error?: string | null;
 }) {
   const [projectId, setProjectId] = useState('');
-  const projects = useProjects(orgSlug, { limit: 100 });
-  const milestones = useMilestones(orgSlug, kind === 'milestone' ? projectId : '');
-  const tasks = useTasks(orgSlug, kind === 'task' ? projectId : '', { limit: 200 });
+  const { can } = useServicePermissions();
+  // Each list is read only when the role can read it, so the picker never trips a 403.
+  const projects = useProjects(orgSlug, { limit: 100 }, can(PERMS.projectsView));
+  const milestones = useMilestones(orgSlug, kind === 'milestone' && can(PERMS.milestonesView) ? projectId : '');
+  const tasks = useTasks(orgSlug, kind === 'task' && can([PERMS.tasksView, PERMS.tasksViewOwn]) ? projectId : '');
   const items =
     kind === 'milestone'
       ? (milestones.data?.data ?? []).map((m) => ({ id: m.id, label: m.name }))
-      : (tasks.data?.data ?? []).map((t) => ({ id: t.id, label: t.wbs_code ? `${t.wbs_code} ${t.title}` : t.title }));
+      : tasks.tasks.map((t) => ({ id: t.id, label: t.wbs_code ? `${t.wbs_code} ${t.title}` : t.title }));
   const loadingItems = kind === 'milestone' ? milestones.isLoading : tasks.isLoading;
 
   return (

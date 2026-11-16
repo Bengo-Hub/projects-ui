@@ -5,6 +5,7 @@ import type {
   TenderEvaluation,
   TenderMeeting,
   TenderMetrics,
+  ListResponse,
   PaginatedResponse,
 } from '@/types';
 
@@ -60,7 +61,7 @@ export const tendersApi = {
     apiClient.get<TenderMetrics>(`${base(orgSlug)}/metrics`),
 
   listCommittees: (orgSlug: string, tenderId: string) =>
-    apiClient.get<PaginatedResponse<TenderCommittee>>(`${base(orgSlug)}/${tenderId}/committees`),
+    apiClient.get<ListResponse<TenderCommittee>>(`${base(orgSlug)}/${tenderId}/committees`),
   createCommittee: (orgSlug: string, tenderId: string, body: { name: string }) =>
     apiClient.post<TenderCommittee>(`${base(orgSlug)}/${tenderId}/committees`, body),
   addCommitteeMember: (orgSlug: string, tenderId: string, committeeId: string, body: { user_id: string; role?: string }) =>
@@ -69,12 +70,12 @@ export const tendersApi = {
     apiClient.delete<void>(`${base(orgSlug)}/${tenderId}/committees/${committeeId}/members/${userId}`),
 
   listEvaluations: (orgSlug: string, tenderId: string) =>
-    apiClient.get<PaginatedResponse<TenderEvaluation>>(`${base(orgSlug)}/${tenderId}/evaluations`),
+    apiClient.get<ListResponse<TenderEvaluation>>(`${base(orgSlug)}/${tenderId}/evaluations`),
   submitEvaluation: (orgSlug: string, tenderId: string, body: CreateEvaluationInput) =>
     apiClient.post<TenderEvaluation>(`${base(orgSlug)}/${tenderId}/evaluations`, body),
 
   listMeetings: (orgSlug: string, tenderId: string) =>
-    apiClient.get<PaginatedResponse<TenderMeeting>>(`${base(orgSlug)}/${tenderId}/meetings`),
+    apiClient.get<ListResponse<TenderMeeting>>(`${base(orgSlug)}/${tenderId}/meetings`),
   scheduleMeeting: (orgSlug: string, tenderId: string, body: CreateMeetingInput) =>
     apiClient.post<TenderMeeting>(`${base(orgSlug)}/${tenderId}/meetings`, body),
 };

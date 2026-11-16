@@ -7,6 +7,8 @@ import { apiClient } from '@/lib/api/client';
 import { useAuthStore } from '@/store/auth';
 import { AUTH_STORAGE_KEY } from '@/lib/auth/token-refresh';
 import { watchSessionAcrossTabs } from '@bengo-hub/shared-ui-lib/auth';
+import { toast } from 'sonner';
+import { UPGRADE_URL } from '@/components/subscription/subscription-banner';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { initialize, status, logout } = useAuthStore();
@@ -48,6 +50,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     return () => apiClient.setOn401(null);
   }, [qc, logout]);
+
+  // A subscription 403 (upgrade:true) is never a sign-out or the unauthorized page: it says what
+  // the plan lacks and links to the plans (SSO guide, Frontend 403 Discrimination).
+  useEffect(() => {
+    apiClient.setOnSubscription403((data) => {
+      const body = data as { code?: string } | undefined;
+      const message =
+        body?.code === 'feature_not_available'
+          ? 'Your plan does not include this feature. Upgrade to use it.'
+          : 'Your subscription is not active. Renew it to keep saving changes.';
+      toast.error(message, {
+        id: 'subscription-403',
+        action: { label: 'See plans', onClick: () => window.open(UPGRADE_URL, '_blank', 'noopener,noreferrer') },
+      });
+    });
+    return () => apiClient.setOnSubscription403(null);
+  }, []);
 
   useEffect(() => {
     const isAuthPath = pathname?.includes('/auth');

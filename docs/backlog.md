@@ -11,6 +11,20 @@
 - The header uses `bg-white` instead of theme tokens; form grids are fixed at two columns; the board does not scroll sideways on phones.
 - `packageManager` says pnpm 9 while the Dockerfile installs pnpm 10; the Radix packages are on `latest`.
 
+### Access and API contract (built 2026-11-16, see plan.md Sprint 0b)
+
+Done: the service auth/me profile with the 404 fallback, the permission registry and its node tests, nav, page guards and buttons on service codes, the 403 split (unauthorized page, permission toast, upgrade toast), the project not-found state, paged tasks, the new task detail and Gantt shapes, Settings, Roles and access, tenant branding by slug and the step 8 sign out. Still open:
+
+- Waiting on the main session: type check, lint, `pnpm test`, build and Playwright for these changes, including the new `e2e/access.spec.ts`.
+- Adding a person to the organisation from Roles and access (`POST /users`). I left it out until I decide how it sits beside the accounts site invite; today the page links to the accounts site.
+- The team page and committees still take a raw user id. They should pick people from `GET /rbac/users` with the shared SearchableCombobox.
+- Task detail drawer using the new GET task (comments and count). Sprint 12.
+- The tenders list loads one page of 20; it needs Show more like tasks.
+
+## Security
+
+- On 2026-11-16 GitHub reported 15 Dependabot alerts on the default branch: 2 critical, 6 high and 7 moderate. I review and upgrade them in the sprint 11 security pass, alongside a dependency audit.
+
 ## Project finance
 
 Done 2026-09-29 (plan budgets-planning-projects-bi-2026-09-27). The Financials tab and the portfolio dashboard gate on `budget_tracking`. The two older fixes (tender metrics shape and the `page_size` param) shipped with it.

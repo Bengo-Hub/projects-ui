@@ -13,17 +13,26 @@ import { Badge } from '@/components/ui/badge';
 import { PageLoading } from '@/components/ui/loading';
 import { ErrorBanner } from '@/components/ui/error-banner';
 import { formatDistanceToNow } from 'date-fns';
+import { useServicePermissions } from '@/hooks/usePermissions';
+import { PERMS } from '@/lib/auth/permissions';
 
 export default function DashboardPage() {
   const params = useParams();
   const orgSlug = (params?.orgSlug as string) ?? '';
 
+  // Each widget asks only for what the role can read, so the home page never trips a 403.
+  const { can, isLoading: permsLoading } = useServicePermissions();
+  const canProjects = can(PERMS.projectsView);
+  const canTenders = can(PERMS.tendersView);
+  // The tenant-wide trend is for people who see every project; projects-api refuses it otherwise.
+  const canTrend = can(PERMS.projectsManage) && can(PERMS.tasksView);
+
   // Counts come from grouped metrics endpoints; the lists only feed the five most recent rows.
-  const { data: projectMetrics, isLoading: metricsLoading, isError: projectsError } = useProjectMetrics(orgSlug);
-  const { data: tenderMetrics } = useTenderMetrics(orgSlug);
-  const { data: projectsData } = useProjects(orgSlug, { limit: 5 });
-  const { data: tendersData } = useTenders(orgSlug, { limit: 5 });
-  const { data: trend = [] } = useTaskTrend(orgSlug, undefined, 6);
+  const { data: projectMetrics, isLoading: metricsLoading, isError: projectsError } = useProjectMetrics(orgSlug, canProjects);
+  const { data: tenderMetrics } = useTenderMetrics(orgSlug, canTenders);
+  const { data: projectsData } = useProjects(orgSlug, { limit: 5 }, canProjects);
+  const { data: tendersData } = useTenders(orgSlug, { limit: 5 }, canTenders);
+  const { data: trend = [] } = useTaskTrend(orgSlug, undefined, 6, canTrend);
 
   const projects = projectsData?.data ?? [];
   const tenders = tendersData?.data ?? [];
@@ -31,24 +40,33 @@ export default function DashboardPage() {
   const activeProjects = byStatus.active ?? 0;
   const awardedTenders = tenderMetrics?.by_status?.awarded?.count ?? 0;
 
-  if (metricsLoading) return <PageLoading />;
+  if (permsLoading || metricsLoading) return <PageLoading />;
   if (projectsError) return <ErrorBanner message="Failed to load dashboard data." />;
+
+  const counts = [
+    ...(canProjects
+      ? [
+          { label: can(PERMS.projectsManage) ? 'Total projects' : 'My projects', value: projectMetrics?.total ?? 0 },
+          { label: 'Active projects', value: activeProjects },
+        ]
+      : []),
+    ...(canTenders
+      ? [
+          { label: 'Total tenders', value: tenderMetrics?.total ?? 0 },
+          { label: 'Tenders awarded', value: awardedTenders },
+        ]
+      : []),
+  ];
 
   return (
     <div className="space-y-6">
       <PageHeader title="Dashboard" subtitle="Overview of projects and tenders" className="mb-0" />
 
-      <CountRow
-        items={[
-          { label: 'Total projects', value: projectMetrics?.total ?? 0 },
-          { label: 'Active projects', value: activeProjects },
-          { label: 'Total tenders', value: tenderMetrics?.total ?? 0 },
-          { label: 'Tenders awarded', value: awardedTenders },
-        ]}
-      />
+      {counts.length > 0 && <CountRow items={counts} />}
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Recent Projects */}
+        {canProjects && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -85,8 +103,10 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* Recent Tenders */}
+        {canTenders && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -121,9 +141,11 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+        )}
       </div>
 
       {/* Task flow */}
+      {canTrend && (
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Task Flow (last 6 months)</CardTitle>
@@ -138,8 +160,10 @@ export default function DashboardPage() {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* Status breakdown */}
+      {canProjects && (
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Project Status Breakdown</CardTitle>
@@ -155,6 +179,7 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

@@ -9,14 +9,15 @@ import {
   type CreateEvaluationInput,
   type CreateMeetingInput,
 } from '@/lib/api/tenders';
+import { onMutationError } from '@/lib/api/errors';
 
 const KEY = 'tenders';
 
-export function useTenders(orgSlug: string, params?: ListTendersParams) {
+export function useTenders(orgSlug: string, params?: ListTendersParams, enabled = true) {
   return useQuery({
     queryKey: [KEY, orgSlug, params],
     queryFn: () => tendersApi.list(orgSlug, params),
-    enabled: !!orgSlug,
+    enabled: enabled && !!orgSlug,
   });
 }
 
@@ -28,11 +29,11 @@ export function useTender(orgSlug: string, id: string) {
   });
 }
 
-export function useTenderMetrics(orgSlug: string) {
+export function useTenderMetrics(orgSlug: string, enabled = true) {
   return useQuery({
     queryKey: [KEY, orgSlug, 'metrics'],
     queryFn: () => tendersApi.metrics(orgSlug),
-    enabled: !!orgSlug,
+    enabled: enabled && !!orgSlug,
   });
 }
 
@@ -44,7 +45,7 @@ export function useCreateTender(orgSlug: string) {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug] });
       toast.success('Tender created');
     },
-    onError: () => toast.error('Failed to create tender'),
+    onError: onMutationError('Failed to create tender'),
   });
 }
 
@@ -58,7 +59,7 @@ export function useUpdateTender(orgSlug: string) {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, id] });
       toast.success('Tender updated');
     },
-    onError: () => toast.error('Failed to update tender'),
+    onError: onMutationError('Failed to update tender'),
   });
 }
 
@@ -70,7 +71,7 @@ export function useDeleteTender(orgSlug: string) {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug] });
       toast.success('Tender deleted');
     },
-    onError: () => toast.error('Failed to delete tender'),
+    onError: onMutationError('Failed to delete tender'),
   });
 }
 
@@ -91,7 +92,7 @@ export function useCreateCommittee(orgSlug: string, tenderId: string) {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, tenderId, 'committees'] });
       toast.success('Committee created');
     },
-    onError: () => toast.error('Failed to create committee'),
+    onError: onMutationError('Failed to create committee'),
   });
 }
 
@@ -104,7 +105,7 @@ export function useAddCommitteeMember(orgSlug: string, tenderId: string, committ
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, tenderId, 'committees'] });
       toast.success('Member added to committee');
     },
-    onError: () => toast.error('Failed to add committee member'),
+    onError: onMutationError('Failed to add committee member'),
   });
 }
 
@@ -117,7 +118,7 @@ export function useRemoveCommitteeMember(orgSlug: string, tenderId: string, comm
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, tenderId, 'committees'] });
       toast.success('Member removed');
     },
-    onError: () => toast.error('Failed to remove committee member'),
+    onError: onMutationError('Failed to remove committee member'),
   });
 }
 
@@ -138,7 +139,7 @@ export function useSubmitEvaluation(orgSlug: string, tenderId: string) {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, tenderId, 'evaluations'] });
       toast.success('Evaluation submitted');
     },
-    onError: () => toast.error('Failed to submit evaluation'),
+    onError: onMutationError('Failed to submit evaluation'),
   });
 }
 
@@ -159,6 +160,6 @@ export function useScheduleMeeting(orgSlug: string, tenderId: string) {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, tenderId, 'meetings'] });
       toast.success('Meeting scheduled');
     },
-    onError: () => toast.error('Failed to schedule meeting'),
+    onError: onMutationError('Failed to schedule meeting'),
   });
 }

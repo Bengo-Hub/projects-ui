@@ -66,6 +66,20 @@ The fix:
   - **Profile:** two steps. First SSO `/auth/me` for identity, then the projects-api `auth/me` for the service role and `projects.*` codes, which drive the sidebar, page guards and buttons. Until now the app only made the first call, so permission checks could only see the global admin role.
   - **403 handling:** a subscription 403 (`upgrade: true`) shows the upgrade message; a permission 403 goes to the unauthorized page.
 
+#### Access and the new API contract (built 2026-11-16)
+
+I aligned the UI with the projects-api access layer and its new list contract.
+
+- **Two-step profile.** `useMe` stays the SSO identity (auth-api `/api/v1/auth/me`). Beside it, `useServicePermissions` (`src/hooks/usePermissions.ts`) calls `GET /api/v1/{orgSlug}/auth/me` and gets the service role, the role list and the effective `projects.*` codes. When that answers 404 (not provisioned yet) I infer the default role from the global roles, the same mapping projects-api uses on first sign-in. `useMe().hasPermission` now reads these service codes. A superuser or the platform owner passes every check.
+- **One registry.** `src/lib/auth/permissions.ts` copies the API registry and system roles exactly, with the same implication rules: a module's `manage` covers its other actions, `view`, `change` and `delete` cover their `_own` forms, and `qa.run` covers `qa.view`. Node tests in `node-tests/permissions.test.ts`. The QA screens use `qaAllowed` over the same service codes.
+- **Where it applies.** The sidebar hides Projects, Portfolio, Tenders, Acceptance and Roles and access without their code. Each page group has a guard layout (`RequirePermission`) that sends a user without the code to `/{orgSlug}/unauthorized` before any query runs. Buttons hide without their code: New project, Add task, task status and progress (full `change`, or `change_own` on my own tasks), Add member and Remove, Add milestone, New tender, committees, evaluations, and Edit terms. The dashboard only asks for what the role can read, and the tenant-wide task trend shows only to people who see every project.
+- **403s.** The query client sends a permission or tenant 403 on a page load to the unauthorized page. A 403 on a save is a toast that names the missing permission. A subscription or feature 403 is the upgrade toast with a link to the plans, and never redirects. The mutation hooks show the API's own message for other errors.
+- **Membership.** A user without `projects.projects.manage` sees only their projects; any other answers 404, and the project pages now show "Project not found" for it.
+- **Lists.** Tasks load a page at a time (`limit` with `page`) with Show more. GET task now carries dependencies, the latest 50 comments and `comments_total`; project reads no longer expect tasks. The Gantt table reads `{data, truncated, limit}` and says when the plan is cut at 2000 tasks. Comment lists take `limit` and `page`. Members, milestones and tender sub-lists are plain `{data}`.
+- **Roles and access.** A new page at Settings, Roles and access (`/{orgSlug}/settings/roles`), shown only with `projects.rbac.manage`. It lists the roles with how many people hold each, and the people with their roles in the shared DataTable (cards on phones). I give a role through the shared SearchableCombobox and remove one through the ConfirmDialog. My own row has no actions, as the API refuses self changes.
+- **Branding and sign out.** The org layout wraps the console in the shared `TenantBrandingProvider`, which reads auth-api `GET /api/v1/tenants/by-slug/{slug}` (6 hour cache) and sets the brand colours; the sidebar shows the tenant logo and name. Sign out clears the auth store, the saved session and tenant keys and sessionStorage, then goes to the SSO logout with this app's origin as the return address.
+- **Tests.** `e2e/qa-mocks.ts` now mocks the SSO identity, the service auth/me (holding each test's permissions) and the tenant by slug. `e2e/access.spec.ts` covers the hidden New project button, the unauthorized page on a permission 403 and from a page guard, the upgrade message on a subscription 403 during a save, and the not-found state.
+
 ### Sprints 12 to 16
 UI work for each API sprint:
 - **12:** task drawer, board drag and drop, list and calendar views, Gantt chart, My Work, live updates.
@@ -110,8 +124,10 @@ sends through its routes.
 | `/qa/sessions/{id}` | signed in | The link in projects-api notices; redirects to `/{tenant_slug}/qa/sessions/{id}` |
 
 The sidebar shows Acceptance only to users who can view QA. Permissions are read with
-`qaAllowed` (`src/lib/qa/logic.ts`), the same rule as projects-api's gate: `manage` covers
-everything, `run` covers view, and tenant admins and the platform owner pass.
+`qaAllowed` (`src/lib/qa/logic.ts`) over the projects service profile (`GET /{tenant}/auth/me`),
+the same rule as projects-api's gate: `manage` covers everything, `run` covers view, and a
+superuser or the platform owner passes. Tenant admins pass because projects-api gives them the
+projects administrator role.
 
 ### Invitee access and autosave
 

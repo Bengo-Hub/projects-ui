@@ -7,6 +7,8 @@ import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-li
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUpdateProject } from '@/hooks/useProjects';
+import { useServicePermissions } from '@/hooks/usePermissions';
+import { PERMS } from '@/lib/auth/permissions';
 import { projectsApi, type LookupOption } from '@/lib/api/projects';
 import type { BillingType, Commercial } from '@/lib/api/financials';
 import { formatCurrency } from '@bengo-hub/shared-ui-lib/format';
@@ -37,6 +39,9 @@ export function CommercialCard({
   currency: string;
 }) {
   const [editing, setEditing] = useState(false);
+  const { can } = useServicePermissions();
+  // The terms are saved with PUT /projects/{id}, which needs projects.projects.change.
+  const canEdit = can(PERMS.projectsChange);
   const c = commercial;
   const margin = c.projected_margin;
 
@@ -44,7 +49,7 @@ export function CommercialCard({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Contract</CardTitle>
-        {!editing && (
+        {!editing && canEdit && (
           <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
             <Pencil className="mr-1 h-4 w-4" /> Edit terms
           </Button>

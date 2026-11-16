@@ -17,17 +17,18 @@ const {
   verdictProblem,
 } = await import('../src/lib/qa/logic.ts');
 
-test('qaAllowed follows projects-api: manage covers all, run covers view, admins and the owner pass', () => {
+test('qaAllowed follows projects-api: manage covers all, run covers view, bypass passes', () => {
+  const p = (permissions: string[], bypass = false) => ({ permissions, bypass });
   assert.equal(qaAllowed(null, 'view'), false);
-  assert.equal(qaAllowed({ permissions: [] }, 'view'), false);
-  assert.equal(qaAllowed({ permissions: ['projects.qa.view'] }, 'view'), true);
-  assert.equal(qaAllowed({ permissions: ['projects.qa.view'] }, 'run'), false);
-  assert.equal(qaAllowed({ permissions: ['projects.qa.run'] }, 'view'), true);
-  assert.equal(qaAllowed({ permissions: ['projects.qa.run'] }, 'manage'), false);
-  assert.equal(qaAllowed({ permissions: ['projects.qa.manage'] }, 'run'), true);
-  assert.equal(qaAllowed({ roles: ['admin'] }, 'manage'), true);
-  assert.equal(qaAllowed({ roles: ['superuser'] }, 'manage'), true);
-  assert.equal(qaAllowed({ isPlatformOwner: true }, 'manage'), true);
+  assert.equal(qaAllowed(p([]), 'view'), false);
+  assert.equal(qaAllowed(p(['projects.qa.view']), 'view'), true);
+  assert.equal(qaAllowed(p(['projects.qa.view']), 'run'), false);
+  assert.equal(qaAllowed(p(['projects.qa.run']), 'view'), true);
+  assert.equal(qaAllowed(p(['projects.qa.run']), 'manage'), false);
+  assert.equal(qaAllowed(p(['projects.qa.manage']), 'run'), true);
+  // Global roles alone grant nothing here: projects-api turns them into a service role first.
+  assert.equal(qaAllowed(p(['projects.projects.view']), 'view'), false);
+  assert.equal(qaAllowed(p([], true), 'manage'), true);
 });
 
 test('a failure needs a severity from 1 to 4; other verdicts drop it', () => {

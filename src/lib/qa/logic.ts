@@ -13,8 +13,9 @@ import type {
   QAWeight,
 } from '../../types/qa';
 
-// Permissions, in the same shape as projects-api's qaAllowed (internal/http/handlers/qa_perms.go):
-// manage includes run and view, run includes view; tenant admins and the platform owner pass.
+// Permissions, read from the projects service profile (GET /{tenant}/auth/me) the same way
+// projects-api's QA gates read them: manage includes run and view, run includes view; a superuser
+// or the platform owner (bypass) passes.
 export const QA_PERMISSIONS = {
   view: 'projects.qa.view',
   run: 'projects.qa.run',
@@ -23,19 +24,16 @@ export const QA_PERMISSIONS = {
 
 export type QAAccessLevel = keyof typeof QA_PERMISSIONS;
 
-export interface QAUserLike {
-  permissions?: string[];
-  roles?: string[];
-  isPlatformOwner?: boolean;
+/** The service permission subject: effective projects.* codes and the bypass flag. */
+export interface QASubject {
+  permissions: string[];
+  bypass: boolean;
 }
 
-const ADMIN_ROLES = ['admin', 'super_admin', 'superuser'];
-
-export function qaAllowed(user: QAUserLike | null | undefined, need: QAAccessLevel): boolean {
-  if (!user) return false;
-  const perms = user.permissions ?? [];
-  const roles = user.roles ?? [];
-  if (user.isPlatformOwner || roles.some((r) => ADMIN_ROLES.includes(r))) return true;
+export function qaAllowed(subject: QASubject | null | undefined, need: QAAccessLevel): boolean {
+  if (!subject) return false;
+  const perms = subject.permissions;
+  if (subject.bypass) return true;
   if (perms.includes(QA_PERMISSIONS.manage)) return true;
   if (need === 'view' && perms.includes(QA_PERMISSIONS.run)) return true;
   return perms.includes(QA_PERMISSIONS[need]);

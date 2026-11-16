@@ -6,7 +6,7 @@ import { ORG, freshTenant, mockTenantApi, signIn } from './qa-mocks';
 
 test('the shell fits the viewport: bottom bar on phones, sidebar on desktop', async ({ page, context, baseURL }, testInfo) => {
   const s = freshTenant({ permissions: [] });
-  const user = await signIn(context, baseURL!, s.permissions);
+  const user = await signIn(context, baseURL!);
   await mockTenantApi(page, s, user);
   await page.goto(`/${ORG}/dashboard`);
 

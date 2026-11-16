@@ -127,14 +127,17 @@ function fixtureToken(): string {
   return `${b64url('{"alg":"none"}')}.${b64url(JSON.stringify(claims))}.e2e`; // secret-scan:allow (unsigned fixture token for the mocked SSO session)
 }
 
-/** A saved sign-in in the shape the zustand auth store persists, so no SSO round trip happens. */
-export async function signIn(context: BrowserContext, baseURL: string, permissions: string[]) {
+/**
+ * A saved sign-in in the shape the zustand auth store persists, so no SSO round trip happens. The
+ * SSO identity carries global roles only; projects permissions come from the service auth/me.
+ */
+export async function signIn(context: BrowserContext, baseURL: string) {
   const user = {
     id: '44444444-4444-4444-8444-444444444444',
     email: 'owner@acme.test',
     fullName: 'Owner',
     roles: ['member'],
-    permissions,
+    permissions: [] as string[],
     tenant_id: '55555555-5555-4555-8555-555555555555',
     tenant_slug: ORG,
     isPlatformOwner: false,
@@ -150,10 +153,31 @@ export async function signIn(context: BrowserContext, baseURL: string, permissio
   return user;
 }
 
+/** projects-api's GET /{tenant}/auth/me for the signed-in user, holding s.permissions. */
+export function serviceProfile(s: TenantState, user: Awaited<ReturnType<typeof signIn>>) {
+  return {
+    user_id: user.id,
+    email: user.email,
+    name: user.fullName,
+    tenant_id: user.tenant_id,
+    global_roles: user.roles,
+    service_role: s.permissions.length > 0 ? 'member' : '',
+    roles: s.permissions.length > 0 ? ['member'] : [],
+    permissions: s.permissions,
+    is_platform_owner: false,
+  };
+}
+
 export async function mockTenantApi(page: Page, s: TenantState, user: Awaited<ReturnType<typeof signIn>>) {
-  // Anything not mocked below answers an empty success, so shell widgets never hang a test.
-  await page.route(/\/api\/v1\//, (r) => json(r, { data: [], total: 0 }));
-  await page.route(/\/api\/v1\/auth\/me$/, (r) => json(r, { ...user, permissions: s.permissions }));
+  // Anything not mocked below answers an empty page, so shell widgets never hang a test.
+  await page.route(/\/api\/v1\//, (r) => json(r, { data: [], total: 0, limit: 20, page: 1, hasMore: false }));
+  // Step one of the profile: the SSO identity (auth-api). Step two: the projects service profile.
+  await page.route(/\/api\/v1\/auth\/me$/, (r) => json(r, user));
+  await page.route(new RegExp(`/api/v1/${ORG}/auth/me$`), (r) => json(r, serviceProfile(s, user)));
+  // Tenant branding by slug (auth-api, public).
+  await page.route(new RegExp(`/api/v1/tenants/by-slug/${ORG}$`), (r) =>
+    json(r, { id: user.tenant_id, name: 'Acme Works', slug: ORG, status: 'active', use_case: 'other' }),
+  );
   const q = `/api/v1/${ORG}/qa`;
   const session = () => ({
     id: SESSION_ID,

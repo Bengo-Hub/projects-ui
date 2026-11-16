@@ -6,8 +6,9 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { Lock, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { useFeature } from '@bengo-hub/shared-ui-lib/subscription';
 import { UPGRADE_URL } from '@/components/subscription/subscription-banner';
-import { useMe } from '@/hooks/useMe';
-import { useQAPermissions } from '@/hooks/useQA';
+import { useTenantBranding } from '@bengo-hub/shared-ui-lib/tenant';
+import { MediaImage } from '@bengo-hub/shared-ui-lib/media';
+import { useServicePermissions } from '@/hooks/usePermissions';
 import { navPathActive, visibleNav, type NavGroup, type NavItem } from '@/lib/nav';
 import { cn } from '@/lib/utils';
 
@@ -19,11 +20,10 @@ export function useNavFeatures(): Record<NonNullable<NavItem['subFeature']>, boo
   return { project_management, budget_tracking };
 }
 
-/** The nav groups this user may see. */
+/** The nav groups this user may see, from the projects service permissions. */
 export function useVisibleNav(): NavGroup[] {
-  const { canView: canViewQA } = useQAPermissions();
-  const { user } = useMe();
-  return visibleNav({ canViewQA, isPlatformOwner: !!user?.isPlatformOwner });
+  const { can, isPlatformOwner } = useServicePermissions();
+  return visibleNav({ can, isPlatformOwner });
 }
 
 function ItemLink({
@@ -123,18 +123,25 @@ function NavTree({ orgSlug, collapsed, onNavigate }: { orgSlug: string; collapse
 }
 
 function Brand({ orgSlug, collapsed }: { orgSlug: string; collapsed: boolean }) {
+  // The tenant's logo and name from auth-api (Accounts > Branding), the slug until it loads.
+  const { tenant, getServiceTitle } = useTenantBranding();
+  const orgName = tenant?.orgName || tenant?.name || orgSlug;
   return (
     <Link
       href={`/${orgSlug}/dashboard`}
       className={cn('flex h-14 shrink-0 items-center gap-3 border-b border-sidebar-border px-4 sm:h-16', collapsed && 'justify-center px-0')}
     >
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary font-display text-sm font-semibold text-primary-foreground" aria-hidden>
-        P
-      </span>
+      {tenant?.logoUrl ? (
+        <MediaImage src={tenant.logoUrl} displayWidth={64} loading="eager" alt="" className="h-8 w-8 shrink-0 rounded-lg object-contain" />
+      ) : (
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary font-display text-sm font-semibold text-primary-foreground" aria-hidden>
+          P
+        </span>
+      )}
       {!collapsed && (
         <span className="min-w-0">
-          <span className="block truncate font-display text-base font-semibold text-sidebar-foreground">Projects</span>
-          <span className="block truncate text-[11px] text-sidebar-muted">{orgSlug}</span>
+          <span className="block truncate font-display text-base font-semibold text-sidebar-foreground">{getServiceTitle('Projects', 'projects')}</span>
+          <span className="block truncate text-[11px] text-sidebar-muted">{orgName}</span>
         </span>
       )}
     </Link>

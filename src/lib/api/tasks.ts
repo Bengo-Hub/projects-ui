@@ -1,5 +1,14 @@
 import { apiClient } from './client';
-import type { Task, GanttTask, PaginatedResponse, TaskTrendMonth } from '@/types';
+import type { Task, TaskDetail, GanttResponse, PaginatedResponse, TaskTrendMonth } from '@/types';
+
+/** One page of a project's tasks: limit (up to 500) with a 1-based page, plus filters. */
+export interface ListTasksParams {
+  limit?: number;
+  page?: number;
+  status?: string;
+  priority?: string;
+  assignee_id?: string;
+}
 
 export interface CreateTaskInput {
   title: string;
@@ -25,10 +34,11 @@ function base(orgSlug: string, projectId: string) {
 }
 
 export const tasksApi = {
-  list: (orgSlug: string, projectId: string, params?: Record<string, unknown>) =>
-    apiClient.get<PaginatedResponse<Task>>(base(orgSlug, projectId), params),
+  list: (orgSlug: string, projectId: string, params?: ListTasksParams) =>
+    apiClient.get<PaginatedResponse<Task>>(base(orgSlug, projectId), params as Record<string, unknown>),
+  /** The task with edges.dependencies, its latest 50 comments oldest first and comments_total. */
   get: (orgSlug: string, projectId: string, id: string) =>
-    apiClient.get<Task>(`${base(orgSlug, projectId)}/${id}`),
+    apiClient.get<TaskDetail>(`${base(orgSlug, projectId)}/${id}`),
   create: (orgSlug: string, projectId: string, body: CreateTaskInput) =>
     apiClient.post<Task>(base(orgSlug, projectId), body),
   update: (orgSlug: string, projectId: string, id: string, body: Partial<CreateTaskInput>) =>
@@ -44,6 +54,7 @@ export const tasksApi = {
     apiClient
       .get<{ data: TaskTrendMonth[] }>(`/api/v1/${orgSlug}/tasks/trend`, params)
       .then((r) => r.data ?? []),
+  /** Up to 2000 tasks (oldest first) with their dependencies; truncated says the project has more. */
   gantt: (orgSlug: string, projectId: string) =>
-    apiClient.get<GanttTask[]>(`/api/v1/${orgSlug}/projects/${projectId}/gantt`),
+    apiClient.get<GanttResponse>(`/api/v1/${orgSlug}/projects/${projectId}/gantt`),
 };

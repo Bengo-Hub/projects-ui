@@ -1,4 +1,5 @@
-import { ClipboardCheck, FileText, FolderKanban, KeyRound, LayoutDashboard, PieChart, type LucideIcon } from 'lucide-react';
+import { ClipboardCheck, FileText, FolderKanban, KeyRound, LayoutDashboard, PieChart, ShieldCheck, type LucideIcon } from 'lucide-react';
+import { PERMS } from '@/lib/auth/permissions';
 
 export interface NavItem {
   label: string;
@@ -9,8 +10,8 @@ export interface NavItem {
   shortLabel?: string;
   /** Subscription feature code: shows an upgrade lock when the tenant's plan lacks it. */
   subFeature?: 'project_management' | 'budget_tracking';
-  /** Hidden unless the user can view QA (projects.qa.view, or run or manage). */
-  needsQA?: boolean;
+  /** Hidden unless the user holds one of these projects permissions (service auth/me). */
+  permission?: readonly string[];
   /** Platform owner only. */
   platformOnly?: boolean;
   /** Shown in the phone bottom bar. */
@@ -27,16 +28,20 @@ export const NAV: NavGroup[] = [
     label: 'Work',
     items: [
       { label: 'Dashboard', shortLabel: 'Home', path: '/dashboard', icon: LayoutDashboard, bottomNav: true },
-      { label: 'Projects', path: '/projects', icon: FolderKanban, subFeature: 'project_management', bottomNav: true },
-      { label: 'Portfolio', path: '/portfolio', icon: PieChart, subFeature: 'budget_tracking', bottomNav: true },
+      { label: 'Projects', path: '/projects', icon: FolderKanban, subFeature: 'project_management', permission: [PERMS.projectsView], bottomNav: true },
+      { label: 'Portfolio', path: '/portfolio', icon: PieChart, subFeature: 'budget_tracking', permission: [PERMS.financialsView], bottomNav: true },
     ],
   },
   {
     label: 'Bids and delivery',
     items: [
-      { label: 'Tenders', path: '/tenders', icon: FileText, subFeature: 'project_management', bottomNav: true },
-      { label: 'Acceptance', path: '/qa', icon: ClipboardCheck, subFeature: 'project_management', needsQA: true },
+      { label: 'Tenders', path: '/tenders', icon: FileText, subFeature: 'project_management', permission: [PERMS.tendersView], bottomNav: true },
+      { label: 'Acceptance', path: '/qa', icon: ClipboardCheck, subFeature: 'project_management', permission: [PERMS.qaView] },
     ],
+  },
+  {
+    label: 'Settings',
+    items: [{ label: 'Roles and access', path: '/settings/roles', icon: ShieldCheck, permission: [PERMS.rbacManage] }],
   },
   {
     label: 'Platform',
@@ -45,12 +50,13 @@ export const NAV: NavGroup[] = [
 ];
 
 export interface NavAccess {
-  canViewQA: boolean;
+  /** Whether the user holds any of the codes (implications and bypass included). */
+  can: (codes: readonly string[]) => boolean;
   isPlatformOwner: boolean;
 }
 
 export function itemVisible(item: NavItem, access: NavAccess): boolean {
-  if (item.needsQA && !access.canViewQA) return false;
+  if (item.permission && !access.can(item.permission)) return false;
   if (item.platformOnly && !access.isPlatformOwner) return false;
   return true;
 }

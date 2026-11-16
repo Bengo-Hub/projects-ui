@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Milestone, PaginatedResponse } from '@/types';
+import type { Milestone, ListResponse } from '@/types';
 
 export interface CreateMilestoneInput {
   name: string;
@@ -14,7 +14,7 @@ function base(orgSlug: string, projectId: string) {
 
 export const milestonesApi = {
   list: (orgSlug: string, projectId: string) =>
-    apiClient.get<PaginatedResponse<Milestone>>(base(orgSlug, projectId)),
+    apiClient.get<ListResponse<Milestone>>(base(orgSlug, projectId)),
   get: (orgSlug: string, projectId: string, id: string) =>
     apiClient.get<Milestone>(`${base(orgSlug, projectId)}/${id}`),
   create: (orgSlug: string, projectId: string, body: CreateMilestoneInput) =>

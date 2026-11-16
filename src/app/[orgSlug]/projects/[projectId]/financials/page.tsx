@@ -14,6 +14,8 @@ import { UPGRADE_URL } from '@/components/subscription/subscription-banner';
 import { formatCurrency } from '@bengo-hub/shared-ui-lib/format';
 import { PageHeader } from '@/components/common/page-header';
 import { StatTile } from '@/components/common/stat-tile';
+import { ProjectNotFound } from '@/components/common/not-found-state';
+import { isNotFound } from '@/lib/api/errors';
 import { CommercialCard } from './commercial-card';
 
 const TREASURY_UI = process.env.NEXT_PUBLIC_TREASURY_UI_URL ?? 'https://books.codevertexafrica.com';
@@ -63,7 +65,7 @@ export default function ProjectFinancialsPage() {
   const orgSlug = (params?.orgSlug as string) ?? '';
   const projectId = (params?.projectId as string) ?? '';
   const hasBudgetTracking = useFeature('budget_tracking');
-  const { data, isLoading, isError } = useProjectFinancials(orgSlug, projectId, hasBudgetTracking);
+  const { data, isLoading, isError, error } = useProjectFinancials(orgSlug, projectId, hasBudgetTracking);
 
   const curve = useMemo(() => sCurve(data?.money), [data?.money]);
   const categories = useMemo(
@@ -94,6 +96,7 @@ export default function ProjectFinancialsPage() {
     );
   }
   if (isLoading) return <PageLoading />;
+  if (isNotFound(error)) return <ProjectNotFound orgSlug={orgSlug} />;
   if (isError || !data) return <ErrorBanner message="Failed to load project financials." />;
 
   const money = data.money;

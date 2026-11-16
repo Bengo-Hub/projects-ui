@@ -13,6 +13,8 @@ import { formatDate } from '@bengo-hub/shared-ui-lib/format';
 import { PageHeader } from '@/components/common/page-header';
 import { RichTextField, RichTextView } from '@/components/common/rich-text';
 import type { CreateEvaluationInput } from '@/lib/api/tenders';
+import { useServicePermissions } from '@/hooks/usePermissions';
+import { PERMS } from '@/lib/auth/permissions';
 
 function SubmitEvaluationModal({
   onClose,
@@ -83,6 +85,9 @@ export default function EvaluationsPage() {
 
   const { data, isLoading, isError } = useTenderEvaluations(orgSlug, tenderId);
   const submitEvaluation = useSubmitEvaluation(orgSlug, tenderId);
+  const { can } = useServicePermissions();
+  // Submitting an evaluation is tender management (projects.tenders.manage).
+  const canSubmit = can(PERMS.tendersManage);
 
   const evaluations = data?.data ?? [];
   const avgScore = evaluations.length > 0
@@ -96,6 +101,13 @@ export default function EvaluationsPage() {
   if (isLoading) return <PageLoading />;
   if (isError) return <ErrorBanner message="Failed to load evaluations." />;
 
+  const submitButton = canSubmit ? (
+    <Button size="sm" onClick={() => setShowSubmit(true)}>
+      <Plus className="h-4 w-4" />
+      Submit evaluation
+    </Button>
+  ) : undefined;
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -103,25 +115,15 @@ export default function EvaluationsPage() {
         subtitle={avgScore !== null ? `Average score: ${avgScore}/100` : undefined}
         back={{ href: `/${orgSlug}/tenders/${tenderId}`, label: 'Tender' }}
         className="mb-0"
-        actions={
-          <Button size="sm" onClick={() => setShowSubmit(true)}>
-            <Plus className="h-4 w-4" />
-            Submit evaluation
-          </Button>
-        }
+        actions={submitButton}
       />
 
       {evaluations.length === 0 ? (
         <EmptyState
           icon={Star}
           title="No evaluations yet"
-          description="Submit the first evaluation for this tender."
-          action={
-            <Button size="sm" onClick={() => setShowSubmit(true)}>
-              <Plus className="h-4 w-4" />
-              Submit Evaluation
-            </Button>
-          }
+          description={canSubmit ? 'Submit the first evaluation for this tender.' : 'Evaluations show here once the committee submits them.'}
+          action={submitButton}
         />
       ) : (
         <Card>

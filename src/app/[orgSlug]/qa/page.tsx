@@ -14,6 +14,9 @@ import { QANav, QANoAccess } from '@/components/qa/qa-nav';
 import { SessionStatusBadge } from '@/components/qa/qa-badges';
 import { useCreateQASession, useQAPermissions, useQASessions, useQATemplates } from '@/hooks/useQA';
 import { useProjects } from '@/hooks/useProjects';
+import { useServicePermissions } from '@/hooks/usePermissions';
+import { useAuthStore } from '@/store/auth';
+import { PERMS } from '@/lib/auth/permissions';
 import { QA_PERMISSIONS } from '@/lib/qa/logic';
 import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
 import { formatDate } from '@bengo-hub/shared-ui-lib/format';
@@ -38,9 +41,10 @@ function subjectText(s: QASession): string {
 
 function CreateSessionDialog({ orgSlug, open, onOpenChange }: { orgSlug: string; open: boolean; onOpenChange: (o: boolean) => void }) {
   const router = useRouter();
-  const { user } = useQAPermissions();
+  const user = useAuthStore((s) => s.user);
+  const { can } = useServicePermissions();
   const templates = useQATemplates(orgSlug, { limit: 100 }, open);
-  const projects = useProjects(orgSlug, { limit: 100 });
+  const projects = useProjects(orgSlug, { limit: 100 }, open && can(PERMS.projectsView));
   const create = useCreateQASession(orgSlug);
   const [form, setForm] = useState<CreateSessionInput>({ template_id: '', title: '', subject_kind: 'general', subject_ref: '' });
   const [minScore, setMinScore] = useState('');

@@ -17,6 +17,8 @@ import { PageHeader } from '@/components/common/page-header';
 import { ListError, ListFilters, ListSearch } from '@/components/common/list-parts';
 import { RichTextField, toPlainText } from '@/components/common/rich-text';
 import type { CreateProjectInput } from '@/lib/api/projects';
+import { useServicePermissions } from '@/hooks/usePermissions';
+import { PERMS } from '@/lib/auth/permissions';
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Active' },
@@ -119,6 +121,8 @@ export default function ProjectsPage() {
 
   const { data, isLoading, isError, error, refetch, isFetching } = useProjects(orgSlug, { status: status || undefined, limit: PAGE_LIMIT });
   const createProject = useCreateProject(orgSlug);
+  const { can } = useServicePermissions();
+  const canAdd = can(PERMS.projectsAdd);
 
   const projects = useMemo(() => {
     const all = data?.data ?? [];
@@ -143,10 +147,12 @@ export default function ProjectsPage() {
         subtitle={`${data?.total ?? 0} ${status ? statusLabel : 'total'} projects`}
         className="mb-0"
         actions={
-          <Button onClick={() => setShowCreate(true)} size="sm">
-            <Plus className="h-4 w-4" />
-            New project
-          </Button>
+          canAdd ? (
+            <Button onClick={() => setShowCreate(true)} size="sm">
+              <Plus className="h-4 w-4" />
+              New project
+            </Button>
+          ) : undefined
         }
       />
 
@@ -176,10 +182,12 @@ export default function ProjectsPage() {
               ? `Nothing matches "${search.term}".`
               : status
                 ? `No ${statusLabel} projects.`
-                : 'Create your first project to get started.'
+                : canAdd
+                  ? 'Create your first project to get started.'
+                  : 'You are not on any project yet. A project owner can add you to the team.'
           }
           action={
-            !filtered ? (
+            !filtered && canAdd ? (
               <Button size="sm" onClick={() => setShowCreate(true)}>
                 <Plus className="h-4 w-4" />
                 New project

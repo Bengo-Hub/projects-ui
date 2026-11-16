@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { milestonesApi, type CreateMilestoneInput } from '@/lib/api/milestones';
+import { onMutationError } from '@/lib/api/errors';
 
 const KEY = 'milestones';
 
@@ -30,7 +31,7 @@ export function useCreateMilestone(orgSlug: string, projectId: string) {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
       toast.success('Milestone created');
     },
-    onError: () => toast.error('Failed to create milestone'),
+    onError: onMutationError('Failed to create milestone'),
   });
 }
 
@@ -44,7 +45,7 @@ export function useUpdateMilestone(orgSlug: string, projectId: string) {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId, id] });
       toast.success('Milestone updated');
     },
-    onError: () => toast.error('Failed to update milestone'),
+    onError: onMutationError('Failed to update milestone'),
   });
 }
 
@@ -56,6 +57,6 @@ export function useDeleteMilestone(orgSlug: string, projectId: string) {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
       toast.success('Milestone deleted');
     },
-    onError: () => toast.error('Failed to delete milestone'),
+    onError: onMutationError('Failed to delete milestone'),
   });
 }

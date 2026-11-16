@@ -12,26 +12,30 @@ import {
   type UpdateTemplateInput,
 } from '@/lib/api/qa';
 import { chunk, MAX_CRITERIA_PER_CALL, qaAllowed } from '@/lib/qa/logic';
-import { useMe } from '@/hooks/useMe';
+import { forbiddenKind } from '@/lib/api/errors';
+import { useServicePermissions } from '@/hooks/usePermissions';
 import type { QACriterionInput, QAVerdictInput } from '@/types/qa';
 
 const KEY = 'qa';
 
-/** QA access for the signed-in user, read the same way projects-api's gates read it. */
+/** QA access from the projects service profile, read the same way projects-api's gates read it. */
 export function useQAPermissions() {
-  const { user, isLoading } = useMe();
+  const { subject, isLoading, isPlatformOwner } = useServicePermissions();
   return {
     isLoading,
-    user,
-    isPlatformOwner: !!user?.isPlatformOwner,
-    canView: qaAllowed(user, 'view'),
-    canRun: qaAllowed(user, 'run'),
-    canManage: qaAllowed(user, 'manage'),
+    isPlatformOwner,
+    canView: qaAllowed(subject, 'view'),
+    canRun: qaAllowed(subject, 'run'),
+    canManage: qaAllowed(subject, 'manage'),
   };
 }
 
 function onFail(fallback: string) {
-  return (err: unknown) => toast.error(qaErrorMessage(err, fallback));
+  return (err: unknown) => {
+    // A permission, tenant or plan 403 already has its own notice from the query client.
+    if (forbiddenKind(err)) return;
+    toast.error(qaErrorMessage(err, fallback));
+  };
 }
 
 export function useQAFeatures(orgSlug: string, service?: string, enabled = true) {

@@ -16,6 +16,10 @@ import { formatDate } from '@bengo-hub/shared-ui-lib/format';
 import { PageHeader } from '@/components/common/page-header';
 import { RichTextField, RichTextView } from '@/components/common/rich-text';
 import type { CreateMilestoneInput } from '@/lib/api/milestones';
+import { ProjectNotFound } from '@/components/common/not-found-state';
+import { useServicePermissions } from '@/hooks/usePermissions';
+import { isNotFound } from '@/lib/api/errors';
+import { PERMS } from '@/lib/auth/permissions';
 
 function CreateMilestoneModal({
   onClose,
@@ -91,8 +95,10 @@ export default function MilestonesPage() {
 
   const hasMilestoneBilling = useFeature('milestone_billing');
 
-  const { data, isLoading, isError } = useMilestones(orgSlug, projectId);
+  const { data, isLoading, isError, error } = useMilestones(orgSlug, projectId);
   const createMilestone = useCreateMilestone(orgSlug, projectId);
+  const { can } = useServicePermissions();
+  const canAdd = can(PERMS.milestonesAdd);
 
   const milestones = (data?.data ?? []).sort((a, b) => {
     if (!a.target_date) return 1;
@@ -114,7 +120,15 @@ export default function MilestonesPage() {
   }
 
   if (isLoading) return <PageLoading />;
+  if (isNotFound(error)) return <ProjectNotFound orgSlug={orgSlug} />;
   if (isError) return <ErrorBanner message="Failed to load milestones." />;
+
+  const addButton = canAdd ? (
+    <Button size="sm" onClick={() => setShowCreate(true)}>
+      <Plus className="h-4 w-4" />
+      Add milestone
+    </Button>
+  ) : undefined;
 
   return (
     <div className="space-y-5">
@@ -122,26 +136,11 @@ export default function MilestonesPage() {
         title="Milestones"
         back={{ href: `/${orgSlug}/projects/${projectId}`, label: 'Project' }}
         className="mb-0"
-        actions={
-          <Button size="sm" onClick={() => setShowCreate(true)}>
-            <Plus className="h-4 w-4" />
-            Add milestone
-          </Button>
-        }
+        actions={addButton}
       />
 
       {milestones.length === 0 ? (
-        <EmptyState
-          icon={Flag}
-          title="No milestones yet"
-          description="Track key project milestones."
-          action={
-            <Button size="sm" onClick={() => setShowCreate(true)}>
-              <Plus className="h-4 w-4" />
-              Add Milestone
-            </Button>
-          }
-        />
+        <EmptyState icon={Flag} title="No milestones yet" description="Track key project milestones." action={addButton} />
       ) : (
         <div className="space-y-3">
           {milestones.map((m, idx) => (

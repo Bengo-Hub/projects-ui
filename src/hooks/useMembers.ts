@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { membersApi, type AddMemberInput } from '@/lib/api/members';
+import { onMutationError } from '@/lib/api/errors';
 
 const KEY = 'members';
 
@@ -22,7 +23,7 @@ export function useAddMember(orgSlug: string, projectId: string) {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
       toast.success('Member added');
     },
-    onError: () => toast.error('Failed to add member'),
+    onError: onMutationError('Failed to add member'),
   });
 }
 
@@ -35,7 +36,7 @@ export function useUpdateMemberRole(orgSlug: string, projectId: string) {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
       toast.success('Role updated');
     },
-    onError: () => toast.error('Failed to update role'),
+    onError: onMutationError('Failed to update role'),
   });
 }
 
@@ -47,6 +48,6 @@ export function useRemoveMember(orgSlug: string, projectId: string) {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
       toast.success('Member removed');
     },
-    onError: () => toast.error('Failed to remove member'),
+    onError: onMutationError('Failed to remove member'),
   });
 }

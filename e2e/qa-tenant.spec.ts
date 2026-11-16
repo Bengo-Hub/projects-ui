@@ -5,7 +5,7 @@ import { C2, ORG, SESSION_ID, TEMPLATE_ID, freshTenant, mockTenantApi, signIn } 
 
 test('without a QA permission the page says so and the menu hides Acceptance', async ({ page, context, baseURL }) => {
   const s = freshTenant({ permissions: [] });
-  const user = await signIn(context, baseURL!, s.permissions);
+  const user = await signIn(context, baseURL!);
   await mockTenantApi(page, s, user);
   await page.goto(`/${ORG}/qa`);
   await expect(page.getByText('You do not have access to acceptance testing')).toBeVisible();
@@ -14,7 +14,7 @@ test('without a QA permission the page says so and the menu hides Acceptance', a
 
 test('a viewer sees sessions without the manage buttons', async ({ page, context, baseURL }) => {
   const s = freshTenant({ permissions: ['projects.qa.view'] });
-  const user = await signIn(context, baseURL!, s.permissions);
+  const user = await signIn(context, baseURL!);
   await mockTenantApi(page, s, user);
   await page.goto(`/${ORG}/qa`);
   await expect(page.getByRole('link', { name: 'Hadia acceptance' }).first()).toBeVisible();
@@ -23,7 +23,7 @@ test('a viewer sees sessions without the manage buttons', async ({ page, context
 
 test('accept is disabled with the reason while the pass rule fails; reject needs a reason', async ({ page, context, baseURL }) => {
   const s = freshTenant();
-  const user = await signIn(context, baseURL!, s.permissions);
+  const user = await signIn(context, baseURL!);
   await mockTenantApi(page, s, user);
   await page.goto(`/${ORG}/qa/sessions/${SESSION_ID}`);
 
@@ -40,7 +40,7 @@ test('accept is disabled with the reason while the pass rule fails; reject needs
 
 test('accept works once the pass rule is met', async ({ page, context, baseURL }) => {
   const s = freshTenant({ accepted: true });
-  const user = await signIn(context, baseURL!, s.permissions);
+  const user = await signIn(context, baseURL!);
   await mockTenantApi(page, s, user);
   await page.goto(`/${ORG}/qa/sessions/${SESSION_ID}`);
   await page.getByRole('button', { name: 'Accept' }).click();
@@ -50,7 +50,7 @@ test('accept works once the pass rule is met', async ({ page, context, baseURL }
 
 test('a failed ticket can be retried from the defects tab', async ({ page, context, baseURL }) => {
   const s = freshTenant();
-  const user = await signIn(context, baseURL!, s.permissions);
+  const user = await signIn(context, baseURL!);
   await mockTenantApi(page, s, user);
   await page.goto(`/${ORG}/qa/sessions/${SESSION_ID}`);
   await page.getByRole('tab', { name: /Defects/ }).click();
@@ -61,7 +61,7 @@ test('a failed ticket can be retried from the defects tab', async ({ page, conte
 
 test('people are invited with a role', async ({ page, context, baseURL }) => {
   const s = freshTenant({ sessionStatus: 'open' });
-  const user = await signIn(context, baseURL!, s.permissions);
+  const user = await signIn(context, baseURL!);
   await mockTenantApi(page, s, user);
   await page.goto(`/${ORG}/qa/sessions/${SESSION_ID}`);
   await page.getByRole('tab', { name: /People/ }).click();
@@ -78,7 +78,7 @@ test('people are invited with a role', async ({ page, context, baseURL }) => {
 
 test('the report opens in the preview', async ({ page, context, baseURL }) => {
   const s = freshTenant();
-  const user = await signIn(context, baseURL!, s.permissions);
+  const user = await signIn(context, baseURL!);
   await mockTenantApi(page, s, user);
   await page.goto(`/${ORG}/qa/sessions/${SESSION_ID}`);
   await page.getByRole('button', { name: 'Report PDF' }).click();
@@ -87,7 +87,7 @@ test('the report opens in the preview', async ({ page, context, baseURL }) => {
 
 test('criteria import is checked before anything is sent', async ({ page, context, baseURL }) => {
   const s = freshTenant();
-  const user = await signIn(context, baseURL!, s.permissions);
+  const user = await signIn(context, baseURL!);
   await mockTenantApi(page, s, user);
   await page.goto(`/${ORG}/qa/templates/${TEMPLATE_ID}`);
   await page.getByRole('button', { name: 'Import' }).click();
@@ -105,7 +105,7 @@ test('criteria import is checked before anything is sent', async ({ page, contex
 
 test('the feature picker falls back to a typed code while the catalogue is off', async ({ page, context, baseURL }) => {
   const s = freshTenant();
-  const user = await signIn(context, baseURL!, s.permissions);
+  const user = await signIn(context, baseURL!);
   await mockTenantApi(page, s, user);
   await page.goto(`/${ORG}/qa/templates/${TEMPLATE_ID}`);
   await page.getByRole('button', { name: 'Add criterion' }).click();

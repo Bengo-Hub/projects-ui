@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { ProjectMember, PaginatedResponse } from '@/types';
+import type { ProjectMember, ListResponse } from '@/types';
 
 export interface AddMemberInput {
   user_id: string;
@@ -12,7 +12,7 @@ function base(orgSlug: string, projectId: string) {
 
 export const membersApi = {
   list: (orgSlug: string, projectId: string) =>
-    apiClient.get<PaginatedResponse<ProjectMember>>(base(orgSlug, projectId)),
+    apiClient.get<ListResponse<ProjectMember>>(base(orgSlug, projectId)),
   add: (orgSlug: string, projectId: string, body: AddMemberInput) =>
     apiClient.post<ProjectMember>(base(orgSlug, projectId), body),
   updateRole: (orgSlug: string, projectId: string, userId: string, body: { role_code: string }) =>

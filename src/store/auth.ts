@@ -171,14 +171,18 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: async () => {
+        // SSO guide step 8: reset the store, clear the saved session and tenant keys and the tab's
+        // sessionStorage, then let auth-api end the SSO session and send the user back here.
         set({ status: 'idle', user: null, session: null, lastAuthenticatedAt: null });
         apiClient.setAccessToken(null);
         apiClient.setTenantInfo(null, null);
+        apiClient.setPlatformOwner(false);
         if (typeof window !== 'undefined') {
-          try { localStorage.removeItem('tenantSlug'); } catch { /* no-op */ }
-          try { localStorage.removeItem('projects-auth-storage'); } catch { /* no-op */ }
-          try { sessionStorage.clear(); } catch { /* no-op */ }
-          window.location.href = buildLogoutUrl('https://accounts.codevertexafrica.com');
+          for (const key of ['projects-auth-storage', 'tenantId', 'tenantSlug']) {
+            try { localStorage.removeItem(key); } catch { /* storage blocked */ }
+          }
+          try { sessionStorage.clear(); } catch { /* storage blocked */ }
+          window.location.href = buildLogoutUrl(window.location.origin);
         }
       },
 

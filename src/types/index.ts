@@ -12,8 +12,8 @@ export interface Project {
   created_at: string;
   updated_at: string;
   metadata?: Record<string, unknown>;
+  /** GET /projects/{id} loads members and milestones; tasks come from the paged tasks list. */
   edges?: {
-    tasks?: Task[];
     members?: ProjectMember[];
     milestones?: Milestone[];
   };
@@ -41,6 +41,12 @@ export interface Task {
   edges?: {
     dependencies?: TaskDependency[];
   };
+}
+
+/** GET /projects/{id}/tasks/{taskId}: the task, its latest 50 comments oldest first, and the count. */
+export interface TaskDetail extends Task {
+  comments: Comment[];
+  comments_total: number;
 }
 
 export interface TaskDependency {
@@ -187,26 +193,25 @@ export interface TaskTrendMonth {
   overdue_at_month_end: number;
 }
 
+/** The shared pagination envelope (projects, tasks, tenders and both comment lists). */
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;
+  limit: number;
+  page: number;
+  hasMore: boolean;
 }
 
-export interface ApiError {
-  error: string;
-  code?: string;
-  upgrade?: boolean;
+/** A plain list answer ({data}) for routes that do not page. */
+export interface ListResponse<T> {
+  data: T[];
 }
 
-export interface GanttTask {
-  id: string;
-  title: string;
-  start_date?: string;
-  end_date?: string;
-  due_date?: string;
-  status: string;
-  wbs_code?: string;
-  dependencies: string[];
+/** GET /projects/{id}/gantt: tasks with edges.dependencies, capped at limit (2000). */
+export interface GanttResponse {
+  data: Task[];
+  truncated: boolean;
+  limit: number;
 }
 
 export interface ProjectSummary {

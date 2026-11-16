@@ -17,6 +17,8 @@ import { PageHeader } from '@/components/common/page-header';
 import { CountRow } from '@/components/common/list-parts';
 import { RichTextField } from '@/components/common/rich-text';
 import type { CreateTenderInput } from '@/lib/api/tenders';
+import { useServicePermissions } from '@/hooks/usePermissions';
+import { PERMS } from '@/lib/auth/permissions';
 
 const STATUS_TABS = ['all', 'draft', 'evaluating', 'submitted', 'awarded', 'lost', 'cancelled'] as const;
 type StatusTab = (typeof STATUS_TABS)[number];
@@ -173,6 +175,8 @@ export default function TendersPage() {
   const { data, isLoading, isError } = useTenders(orgSlug, { status: statusFilter });
   const { data: metrics } = useTenderMetrics(orgSlug);
   const createTender = useCreateTender(orgSlug);
+  const { can } = useServicePermissions();
+  const canAdd = can(PERMS.tendersAdd);
 
   const tenders = data?.data ?? [];
 
@@ -190,10 +194,12 @@ export default function TendersPage() {
         subtitle={`${data?.total ?? 0} total tenders`}
         className="mb-0"
         actions={
-          <Button onClick={() => setShowCreate(true)} size="sm">
-            <Plus className="h-4 w-4" />
-            New tender
-          </Button>
+          canAdd ? (
+            <Button onClick={() => setShowCreate(true)} size="sm">
+              <Plus className="h-4 w-4" />
+              New tender
+            </Button>
+          ) : undefined
         }
       />
 
@@ -228,9 +234,9 @@ export default function TendersPage() {
         <EmptyState
           icon={FileText}
           title="No tenders found"
-          description={activeTab === 'all' ? 'Create your first tender.' : `No ${activeTab} tenders.`}
+          description={activeTab !== 'all' ? `No ${activeTab} tenders.` : canAdd ? 'Create your first tender.' : 'No tenders have been added yet.'}
           action={
-            activeTab === 'all' ? (
+            activeTab === 'all' && canAdd ? (
               <Button size="sm" onClick={() => setShowCreate(true)}>
                 <Plus className="h-4 w-4" />
                 New tender

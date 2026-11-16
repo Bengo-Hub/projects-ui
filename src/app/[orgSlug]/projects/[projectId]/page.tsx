@@ -14,14 +14,19 @@ import { ErrorBanner } from '@/components/ui/error-banner';
 import { PageHeader } from '@/components/common/page-header';
 import { CountRow } from '@/components/common/list-parts';
 import { RichTextView } from '@/components/common/rich-text';
+import { ProjectNotFound } from '@/components/common/not-found-state';
+import { useServicePermissions } from '@/hooks/usePermissions';
+import { isNotFound } from '@/lib/api/errors';
+import { PERMS } from '@/lib/auth/permissions';
 
 export default function ProjectDetailPage() {
   const params = useParams();
   const orgSlug = (params?.orgSlug as string) ?? '';
   const projectId = (params?.projectId as string) ?? '';
 
-  const { data: project, isLoading, isError } = useProject(orgSlug, projectId);
+  const { data: project, isLoading, isError, error } = useProject(orgSlug, projectId);
   const { data: summary } = useProjectSummary(orgSlug, projectId);
+  const { can } = useServicePermissions();
 
   // Premium tabs gated by plan feature. Tabs without a feature are part of the
   // `project_management` base (already gated at the sidebar/workspace level).
@@ -30,30 +35,32 @@ export default function ProjectDetailPage() {
   const hasBudgetTracking = useFeature('budget_tracking');
 
   if (isLoading) return <PageLoading />;
+  if (isNotFound(error)) return <ProjectNotFound orgSlug={orgSlug} />;
   if (isError || !project) return <ErrorBanner message="Failed to load project." />;
 
-  const subNav: { href: string; label: string; feature?: string; locked?: boolean }[] = [
-    { href: `/${orgSlug}/projects/${projectId}/tasks`, label: 'Tasks' },
+  // Each tab shows only when the role can open it (the same codes its page guard checks).
+  const subNav: { href: string; label: string; locked?: boolean; perm: string | string[] }[] = [
+    { href: `/${orgSlug}/projects/${projectId}/tasks`, label: 'Tasks', perm: [PERMS.tasksView, PERMS.tasksViewOwn] },
     {
       href: `/${orgSlug}/projects/${projectId}/milestones`,
       label: 'Milestones',
-      feature: 'milestone_billing',
       locked: !hasMilestoneBilling,
+      perm: PERMS.milestonesView,
     },
-    { href: `/${orgSlug}/projects/${projectId}/team`, label: 'Team' },
+    { href: `/${orgSlug}/projects/${projectId}/team`, label: 'Team', perm: PERMS.membersView },
     {
       href: `/${orgSlug}/projects/${projectId}/gantt`,
       label: 'Gantt',
-      feature: 'gantt_chart',
       locked: !hasGantt,
+      perm: PERMS.tasksView,
     },
     {
       href: `/${orgSlug}/projects/${projectId}/financials`,
       label: 'Financials',
-      feature: 'budget_tracking',
       locked: !hasBudgetTracking,
+      perm: PERMS.financialsView,
     },
-  ];
+  ].filter((t) => can(t.perm));
 
   const tasksDone = summary?.completed_tasks ?? 0;
   const tasksTotal = summary?.total_tasks ?? 0;

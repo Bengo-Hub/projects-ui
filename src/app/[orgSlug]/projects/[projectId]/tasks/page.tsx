@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Plus, List, LayoutGrid } from 'lucide-react';
 import { DataTable, type DataTableColumn } from '@bengo-hub/shared-ui-lib/data-table';
 import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
@@ -14,6 +14,11 @@ import { ErrorBanner } from '@/components/ui/error-banner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/common/page-header';
 import { RichTextField } from '@/components/common/rich-text';
+import { ShowMore } from '@/components/common/list-parts';
+import { ProjectNotFound } from '@/components/common/not-found-state';
+import { useServicePermissions } from '@/hooks/usePermissions';
+import { isNotFound } from '@/lib/api/errors';
+import { PERMS } from '@/lib/auth/permissions';
 import type { Task } from '@/types';
 import type { CreateTaskInput } from '@/lib/api/tasks';
 
@@ -142,7 +147,15 @@ function CreateTaskModal({
   );
 }
 
-function KanbanCard({ task, onStatusChange }: { task: Task; onStatusChange: (id: string, status: string) => void }) {
+function KanbanCard({
+  task,
+  editable,
+  onStatusChange,
+}: {
+  task: Task;
+  editable: boolean;
+  onStatusChange: (id: string, status: string) => void;
+}) {
   return (
     <div className="space-y-2 rounded-md border border-border bg-card p-3 shadow-sm">
       <p className="break-words text-sm font-medium">{task.title}</p>
@@ -150,14 +163,16 @@ function KanbanCard({ task, onStatusChange }: { task: Task; onStatusChange: (id:
         <Badge status={task.priority} />
         {task.due_date && <span className="text-xs text-muted-foreground">{formatDate(task.due_date)}</span>}
       </div>
-      <SearchableCombobox
-        options={STATUS_OPTIONS}
-        value={task.status}
-        onChange={(v) => v && v !== task.status && onStatusChange(task.id, v)}
-        clearable={false}
-        searchPlaceholder="Move to"
-        className="text-xs"
-      />
+      {editable && (
+        <SearchableCombobox
+          options={STATUS_OPTIONS}
+          value={task.status}
+          onChange={(v) => v && v !== task.status && onStatusChange(task.id, v)}
+          clearable={false}
+          searchPlaceholder="Move to"
+          className="text-xs"
+        />
+      )}
     </div>
   );
 }
@@ -169,15 +184,24 @@ export default function TasksPage() {
   const [view, setView] = useState<'list' | 'kanban'>('kanban');
   const [showCreate, setShowCreate] = useState(false);
 
-  const { data, isLoading, isError } = useTasks(orgSlug, projectId);
+  const { tasks, total, isLoading, isError, error, hasNextPage, fetchNextPage, isFetchingNextPage } = useTasks(orgSlug, projectId);
   const createTask = useCreateTask(orgSlug, projectId);
   const updateTask = useUpdateTask(orgSlug, projectId);
-
-  const tasks = data?.data ?? [];
+  const { can, profile } = useServicePermissions();
+  const canAdd = can(PERMS.tasksAdd);
+  const canChangeAll = can(PERMS.tasksChange);
+  const canChangeOwn = can(PERMS.tasksChangeOwn);
+  const me = profile?.user_id ?? '';
 
   function handleCreate(input: CreateTaskInput) {
     createTask.mutate(input, { onSuccess: () => setShowCreate(false) });
   }
+
+  // change_own covers only the tasks assigned to the user, as projects-api checks.
+  const editable = useCallback(
+    (t: Task) => canChangeAll || (canChangeOwn && !!me && t.assignee_id === me),
+    [canChangeAll, canChangeOwn, me],
+  );
 
   const columns = useMemo<DataTableColumn<Task>[]>(() => {
     const changeProgress = (id: string, progress: number) => updateTask.mutate({ id, data: { progress_pct: progress } });
@@ -208,6 +232,8 @@ export default function TasksPage() {
         render: (t) =>
           t.status === 'done' ? (
             <span className="text-xs text-success">100%</span>
+          ) : !editable(t) ? (
+            <span className="text-xs text-muted-foreground">{t.progress_pct ?? 0}%</span>
           ) : (
             <SearchableCombobox
               options={PROGRESS_OPTIONS}
@@ -220,19 +246,28 @@ export default function TasksPage() {
           ),
       },
     ];
-  }, [updateTask]);
+  }, [updateTask, editable]);
 
   function handleStatusChange(id: string, status: string) {
     updateTask.mutate({ id, data: { status } });
   }
 
   if (isLoading) return <PageLoading />;
+  if (isNotFound(error)) return <ProjectNotFound orgSlug={orgSlug} />;
   if (isError) return <ErrorBanner message="Failed to load tasks." />;
+
+  const addButton = canAdd ? (
+    <Button size="sm" onClick={() => setShowCreate(true)}>
+      <Plus className="h-4 w-4" />
+      Add task
+    </Button>
+  ) : null;
 
   return (
     <div className="space-y-5">
       <PageHeader
         title="Tasks"
+        subtitle={total > tasks.length ? `${tasks.length} of ${total} shown` : undefined}
         back={{ href: `/${orgSlug}/projects/${projectId}`, label: 'Project' }}
         className="mb-0"
         actions={
@@ -257,10 +292,7 @@ export default function TasksPage() {
                 <LayoutGrid className="h-4 w-4" />
               </button>
             </div>
-            <Button size="sm" onClick={() => setShowCreate(true)}>
-              <Plus className="h-4 w-4" />
-              Add task
-            </Button>
+            {addButton}
           </>
         }
       />
@@ -268,13 +300,8 @@ export default function TasksPage() {
       {tasks.length === 0 ? (
         <EmptyState
           title="No tasks yet"
-          description="Add your first task to this project."
-          action={
-            <Button size="sm" onClick={() => setShowCreate(true)}>
-              <Plus className="h-4 w-4" />
-              Add task
-            </Button>
-          }
+          description={canAdd ? 'Add your first task to this project.' : 'Tasks assigned to you will show here.'}
+          action={addButton ?? undefined}
         />
       ) : view === 'kanban' ? (
         // Phones scroll the columns sideways (each a fixed width); from lg they share the row.
@@ -289,7 +316,7 @@ export default function TasksPage() {
                 </div>
                 <div className="min-h-[100px] space-y-2 rounded-md bg-muted/30 p-2">
                   {colTasks.map((task) => (
-                    <KanbanCard key={task.id} task={task} onStatusChange={handleStatusChange} />
+                    <KanbanCard key={task.id} task={task} editable={editable(task)} onStatusChange={handleStatusChange} />
                   ))}
                 </div>
               </div>
@@ -307,6 +334,10 @@ export default function TasksPage() {
           exportFileName="tasks"
         />
       )}
+
+      <div className="grid">
+        <ShowMore show={!!hasNextPage} loading={isFetchingNextPage} onClick={() => void fetchNextPage()} />
+      </div>
 
       {showCreate && (
         <CreateTaskModal onClose={() => setShowCreate(false)} onSubmit={handleCreate} isPending={createTask.isPending} />
