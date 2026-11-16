@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useSyncExternalStore } from 'react';
-import { RichTextEditor } from '@bengo-hub/shared-ui-lib/rich-text-editor';
+import { RichTextEditor, type MentionOption } from '@bengo-hub/shared-ui-lib/rich-text-editor';
 import { cn } from '@/lib/utils';
 
 /**
@@ -18,6 +18,7 @@ export function RichTextField({
   ariaLabel,
   ariaDescribedBy,
   className,
+  mentions,
 }: {
   id?: string;
   value: string;
@@ -27,6 +28,8 @@ export function RichTextField({
   ariaLabel?: string;
   ariaDescribedBy?: string;
   className?: string;
+  /** People the user can @mention (turns mentions on when passed at first render). */
+  mentions?: MentionOption[];
 }) {
   return (
     <RichTextEditor
@@ -38,6 +41,7 @@ export function RichTextField({
       ariaLabel={ariaLabel}
       ariaDescribedBy={ariaDescribedBy}
       className={cn('min-h-28', className)}
+      mentions={mentions}
     />
   );
 }
@@ -52,6 +56,17 @@ function clean(html: string): string {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const walk = (el: Element) => {
     for (const child of Array.from(el.children)) {
+      // A Tiptap mention keeps its person id and label, shown as a chip.
+      if (child.tagName === 'SPAN' && child.getAttribute('data-type') === 'mention') {
+        const id = child.getAttribute('data-id') ?? '';
+        const label = child.getAttribute('data-label') ?? child.textContent?.replace(/^@/, '') ?? '';
+        const span = doc.createElement('span');
+        span.setAttribute('data-type', 'mention');
+        span.setAttribute('data-id', id);
+        span.textContent = `@${label}`;
+        child.replaceWith(span);
+        continue;
+      }
       if (!ALLOWED.has(child.tagName)) {
         // Script and style bodies are dropped whole; any other unknown tag keeps its text.
         if (child.tagName === 'SCRIPT' || child.tagName === 'STYLE' || child.tagName === 'IFRAME') child.remove();
@@ -102,7 +117,7 @@ export function RichTextView({ value, className }: { value?: string | null; clas
   if (!value) return null;
   if (!html) {
     return (
-      <p className={cn('whitespace-pre-line text-sm leading-relaxed break-words', className)}>
+      <p className={cn('whitespace-pre-line text-sm leading-relaxed wrap-break-word', className)}>
         {isHtml ? toPlainText(value) : value}
       </p>
     );
@@ -110,8 +125,9 @@ export function RichTextView({ value, className }: { value?: string | null; clas
   return (
     <div
       className={cn(
-        'text-sm leading-relaxed break-words [&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground',
+        'text-sm leading-relaxed wrap-break-word [&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground',
         '[&_h2]:mt-3 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mt-2 [&_h3]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_p]:my-1.5 [&_ul]:list-disc',
+        '[&_span[data-type=mention]]:rounded [&_span[data-type=mention]]:bg-primary/10 [&_span[data-type=mention]]:px-1 [&_span[data-type=mention]]:font-medium [&_span[data-type=mention]]:text-primary',
         className,
       )}
       dangerouslySetInnerHTML={{ __html: html }}

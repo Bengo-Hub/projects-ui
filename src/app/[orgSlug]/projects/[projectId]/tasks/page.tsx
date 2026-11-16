@@ -1,347 +1,146 @@
 'use client';
 
+import { useMemo, useState, useSyncExternalStore } from 'react';
 import { useParams } from 'next/navigation';
-import { useCallback, useMemo, useState } from 'react';
-import { Plus, List, LayoutGrid } from 'lucide-react';
-import { DataTable, type DataTableColumn } from '@bengo-hub/shared-ui-lib/data-table';
-import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
-import { formatDate } from '@bengo-hub/shared-ui-lib/format';
-import { useTasks, useCreateTask, useUpdateTask } from '@/hooks/useTasks';
-import { Badge } from '@/components/ui/badge';
+import { CalendarDays, Columns3, List, Plus, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageLoading } from '@/components/ui/loading';
 import { ErrorBanner } from '@/components/ui/error-banner';
-import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/common/page-header';
-import { RichTextField } from '@/components/common/rich-text';
-import { ShowMore } from '@/components/common/list-parts';
 import { ProjectNotFound } from '@/components/common/not-found-state';
-import { useServicePermissions } from '@/hooks/usePermissions';
+import { FeatureLocked } from '@/components/subscription/feature-locked';
+import { BoardView } from '@/components/work/board-view';
+import { ListView } from '@/components/work/list-view';
+import { CalendarView } from '@/components/work/calendar-view';
+import { TaskDrawer } from '@/components/work/task-drawer';
+import { CreateTaskDialog } from '@/components/work/create-task-dialog';
+import { StatusEditor } from '@/components/work/status-editor';
+import { TaskFilterBar } from '@/components/work/task-filters';
+import { LiveDot } from '@/components/work/live-dot';
+import { useBoardCounts, useProjectStatuses } from '@/hooks/useTasks';
+import { useProjectPeople } from '@/hooks/usePeople';
+import { useTaskAccess } from '@/hooks/useTaskAccess';
+import { useTaskParam } from '@/hooks/useTaskParam';
+import { useProjectStream } from '@/hooks/useProjectStream';
 import { isNotFound } from '@/lib/api/errors';
-import { PERMS } from '@/lib/auth/permissions';
-import type { Task } from '@/types';
-import type { CreateTaskInput } from '@/lib/api/tasks';
+import { loadFilters, storeFilters, type FilterState } from '@/lib/work/saved-filters';
+import { cn } from '@/lib/utils';
 
-const KANBAN_COLS = [
-  { status: 'todo', label: 'To do' },
-  { status: 'in_progress', label: 'In progress' },
-  { status: 'review', label: 'Review' },
-  { status: 'done', label: 'Done' },
-] as const;
-
-const STATUS_OPTIONS: ComboboxOption[] = KANBAN_COLS.map((c) => ({ value: c.status, label: c.label }));
-const PRIORITY_OPTIONS: ComboboxOption[] = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'critical', label: 'Critical' },
+type View = 'board' | 'list' | 'calendar';
+const VIEWS: { key: View; label: string; icon: typeof List }[] = [
+  { key: 'board', label: 'Board', icon: Columns3 },
+  { key: 'list', label: 'List', icon: List },
+  { key: 'calendar', label: 'Calendar', icon: CalendarDays },
 ];
-const PROGRESS_OPTIONS: ComboboxOption[] = [0, 10, 25, 50, 75, 90].map((p) => ({ value: String(p), label: `${p}%` }));
 
-const inputClass =
-  'w-full rounded-md border border-border bg-background px-3 py-2 text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-ring';
-
-function CreateTaskModal({
-  onClose,
-  onSubmit,
-  isPending,
-}: {
-  onClose: () => void;
-  onSubmit: (data: CreateTaskInput) => void;
-  isPending: boolean;
-}) {
-  const [form, setForm] = useState<CreateTaskInput>({ title: '', priority: 'medium', status: 'todo' });
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.title.trim()) return;
-    onSubmit(form);
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
-      <div className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-xl bg-card p-4 shadow-lg sm:mx-4 sm:rounded-xl sm:p-6">
-        <h2 className="mb-4 text-lg font-semibold">New task</h2>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label htmlFor="task-title" className="mb-1 block text-sm font-medium">Title *</label>
-            <input
-              id="task-title"
-              type="text"
-              value={form.title}
-              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              className={inputClass}
-              placeholder="Task title"
-              required
-            />
-          </div>
-          <div>
-            <span className="mb-1 block text-sm font-medium">Description</span>
-            <RichTextField
-              value={form.description ?? ''}
-              onChange={(html) => setForm((f) => ({ ...f, description: html }))}
-              ariaLabel="Description"
-            />
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <span className="mb-1 block text-sm font-medium">Priority</span>
-              <SearchableCombobox
-                options={PRIORITY_OPTIONS}
-                value={form.priority ?? 'medium'}
-                onChange={(v) => setForm((f) => ({ ...f, priority: v || 'medium' }))}
-                clearable={false}
-                searchPlaceholder="Find a priority"
-              />
-            </div>
-            <div>
-              <label htmlFor="task-due" className="mb-1 block text-sm font-medium">Due date</label>
-              <input
-                id="task-due"
-                type="date"
-                value={form.due_date ?? ''}
-                onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value || undefined }))}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label htmlFor="task-start" className="mb-1 block text-sm font-medium">Start date</label>
-              <input
-                id="task-start"
-                type="date"
-                value={form.start_date ?? ''}
-                onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value || undefined }))}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label htmlFor="task-estimate" className="mb-1 block text-sm font-medium">Estimate (hours)</label>
-              <input
-                id="task-estimate"
-                type="number"
-                min={0}
-                step={0.5}
-                value={form.estimated_hours ?? ''}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, estimated_hours: e.target.value === '' ? undefined : Number(e.target.value) }))
-                }
-                className={inputClass}
-                placeholder="e.g. 8"
-              />
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Start date and estimate let the project track planned against earned progress.
-          </p>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isPending}>
-              Cancel
-            </Button>
-            <Button type="submit" size="sm" disabled={isPending || !form.title.trim()}>
-              {isPending ? 'Creating...' : 'Create task'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function KanbanCard({
-  task,
-  editable,
-  onStatusChange,
-}: {
-  task: Task;
-  editable: boolean;
-  onStatusChange: (id: string, status: string) => void;
-}) {
-  return (
-    <div className="space-y-2 rounded-md border border-border bg-card p-3 shadow-sm">
-      <p className="break-words text-sm font-medium">{task.title}</p>
-      <div className="flex items-center justify-between gap-2">
-        <Badge status={task.priority} />
-        {task.due_date && <span className="text-xs text-muted-foreground">{formatDate(task.due_date)}</span>}
-      </div>
-      {editable && (
-        <SearchableCombobox
-          options={STATUS_OPTIONS}
-          value={task.status}
-          onChange={(v) => v && v !== task.status && onStatusChange(task.id, v)}
-          clearable={false}
-          searchPlaceholder="Move to"
-          className="text-xs"
-        />
-      )}
-    </div>
-  );
-}
+const NO_FILTERS: FilterState = { current: {}, saved: [] };
+const noopSubscribe = () => () => {};
 
 export default function TasksPage() {
   const params = useParams();
   const orgSlug = (params?.orgSlug as string) ?? '';
   const projectId = (params?.projectId as string) ?? '';
-  const [view, setView] = useState<'list' | 'kanban'>('kanban');
-  const [showCreate, setShowCreate] = useState(false);
+  const url = useTaskParam();
+  const view = (VIEWS.some((v) => v.key === url.get('view')) ? url.get('view') : 'board') as View;
+  const access = useTaskAccess();
+  const statuses = useProjectStatuses(orgSlug, projectId);
+  const counts = useBoardCounts(orgSlug, projectId);
+  const { people, nameOf } = useProjectPeople(orgSlug, projectId);
+  const live = useProjectStream(orgSlug, projectId, access.tracking && access.canViewAll);
+  const [creating, setCreating] = useState<{ status?: string } | null>(null);
+  const [editingColumns, setEditingColumns] = useState(false);
+  // Saved filters live in this browser: the server render and the first client render use none
+  // (so hydration matches), then the browser's copy; changes are kept per project.
+  const isClient = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  const stored = useMemo(() => (isClient ? loadFilters(projectId) : NO_FILTERS), [isClient, projectId]);
+  const [edited, setEdited] = useState<{ projectId: string; value: FilterState } | null>(null);
+  const filters = edited?.projectId === projectId ? edited.value : stored;
+  const updateFilters = (next: FilterState) => {
+    setEdited({ projectId, value: next });
+    storeFilters(projectId, next);
+  };
 
-  const { tasks, total, isLoading, isError, error, hasNextPage, fetchNextPage, isFetchingNextPage } = useTasks(orgSlug, projectId);
-  const createTask = useCreateTask(orgSlug, projectId);
-  const updateTask = useUpdateTask(orgSlug, projectId);
-  const { can, profile } = useServicePermissions();
-  const canAdd = can(PERMS.tasksAdd);
-  const canChangeAll = can(PERMS.tasksChange);
-  const canChangeOwn = can(PERMS.tasksChangeOwn);
-  const me = profile?.user_id ?? '';
-
-  function handleCreate(input: CreateTaskInput) {
-    createTask.mutate(input, { onSuccess: () => setShowCreate(false) });
+  if (!access.isLoading && !access.tracking) {
+    return <FeatureLocked title="Task tracking is not on your plan" description="Upgrade your plan to plan and track tasks on boards, lists and calendars." />;
   }
+  if (statuses.isLoading) return <PageLoading />;
+  if (isNotFound(statuses.error)) return <ProjectNotFound orgSlug={orgSlug} />;
+  if (statuses.isError) return <ErrorBanner message="Failed to load the board." />;
 
-  // change_own covers only the tasks assigned to the user, as projects-api checks.
-  const editable = useCallback(
-    (t: Task) => canChangeAll || (canChangeOwn && !!me && t.assignee_id === me),
-    [canChangeAll, canChangeOwn, me],
-  );
-
-  const columns = useMemo<DataTableColumn<Task>[]>(() => {
-    const changeProgress = (id: string, progress: number) => updateTask.mutate({ id, data: { progress_pct: progress } });
-    return [
-      { key: 'title', header: 'Title', primary: true, sortable: true, render: (t) => <span className="font-medium">{t.title}</span> },
-      { key: 'status', header: 'Status', sortable: true, filterable: true, mobileAction: true, render: (t) => <Badge status={t.status} /> },
-      { key: 'priority', header: 'Priority', sortable: true, filterable: true, render: (t) => <Badge status={t.priority} /> },
-      {
-        key: 'due_date',
-        header: 'Due date',
-        sortable: true,
-        accessor: (t) => t.due_date,
-        render: (t) => <span className="text-muted-foreground">{formatDate(t.due_date, null, { fallback: '—' })}</span>,
-      },
-      {
-        key: 'estimated_hours',
-        header: 'Estimate',
-        align: 'right',
-        sortable: true,
-        hideBelow: 'lg',
-        render: (t) => <span className="text-muted-foreground">{t.estimated_hours != null ? `${t.estimated_hours} h` : '—'}</span>,
-      },
-      {
-        key: 'progress_pct',
-        header: 'Progress',
-        exportable: true,
-        accessor: (t) => (t.status === 'done' ? 100 : t.progress_pct ?? 0),
-        render: (t) =>
-          t.status === 'done' ? (
-            <span className="text-xs text-success">100%</span>
-          ) : !editable(t) ? (
-            <span className="text-xs text-muted-foreground">{t.progress_pct ?? 0}%</span>
-          ) : (
-            <SearchableCombobox
-              options={PROGRESS_OPTIONS}
-              value={String(t.progress_pct ?? 0)}
-              onChange={(v) => v !== '' && changeProgress(t.id, Number(v))}
-              clearable={false}
-              searchPlaceholder="Progress"
-              className="w-28 text-xs"
-            />
-          ),
-      },
-    ];
-  }, [updateTask, editable]);
-
-  function handleStatusChange(id: string, status: string) {
-    updateTask.mutate({ id, data: { status } });
-  }
-
-  if (isLoading) return <PageLoading />;
-  if (isNotFound(error)) return <ProjectNotFound orgSlug={orgSlug} />;
-  if (isError) return <ErrorBanner message="Failed to load tasks." />;
-
-  const addButton = canAdd ? (
-    <Button size="sm" onClick={() => setShowCreate(true)}>
-      <Plus className="h-4 w-4" />
-      Add task
-    </Button>
-  ) : null;
+  const columns = statuses.data ?? [];
+  const total = (counts.data ?? []).reduce((n, c) => n + c.count, 0);
+  // The board shows every column, so only the assignee and priority filters apply to it.
+  const boardFilters = { assignee: filters.current.assignee, priority: filters.current.priority };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <PageHeader
         title="Tasks"
-        subtitle={total > tasks.length ? `${tasks.length} of ${total} shown` : undefined}
+        subtitle={counts.data ? `${total} ${total === 1 ? 'task' : 'tasks'}` : undefined}
         back={{ href: `/${orgSlug}/projects/${projectId}`, label: 'Project' }}
         className="mb-0"
         actions={
           <>
-            <div className="flex flex-none rounded-md border border-border" role="group" aria-label="View">
-              <button
-                type="button"
-                onClick={() => setView('list')}
-                aria-pressed={view === 'list'}
-                className={`rounded-l-md p-2 transition-colors ${view === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'}`}
-                aria-label="List view"
-              >
-                <List className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setView('kanban')}
-                aria-pressed={view === 'kanban'}
-                className={`rounded-r-md p-2 transition-colors ${view === 'kanban' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'}`}
-                aria-label="Kanban view"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </button>
-            </div>
-            {addButton}
+            <LiveDot state={live} />
+            {access.canManageStatuses && view === 'board' && (
+              <Button variant="outline" size="sm" className="h-11 sm:h-8" onClick={() => setEditingColumns(true)}>
+                <Settings2 className="h-4 w-4" aria-hidden />
+                <span className="max-sm:sr-only">Columns</span>
+              </Button>
+            )}
+            {access.canAdd && (
+              <Button size="sm" className="h-11 sm:h-8" onClick={() => setCreating({})}>
+                <Plus className="h-4 w-4" aria-hidden />
+                Add task
+              </Button>
+            )}
           </>
         }
       />
 
-      {tasks.length === 0 ? (
-        <EmptyState
-          title="No tasks yet"
-          description={canAdd ? 'Add your first task to this project.' : 'Tasks assigned to you will show here.'}
-          action={addButton ?? undefined}
-        />
-      ) : view === 'kanban' ? (
-        // Phones scroll the columns sideways (each a fixed width); from lg they share the row.
-        <div className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0 lg:grid lg:grid-cols-4 lg:overflow-visible">
-          {KANBAN_COLS.map(({ status, label }) => {
-            const colTasks = tasks.filter((t) => t.status === status);
-            return (
-              <div key={status} className="w-[78vw] max-w-72 shrink-0 snap-start space-y-2 sm:w-64 lg:w-auto lg:max-w-none">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold">{label}</h3>
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{colTasks.length}</span>
-                </div>
-                <div className="min-h-[100px] space-y-2 rounded-md bg-muted/30 p-2">
-                  {colTasks.map((task) => (
-                    <KanbanCard key={task.id} task={task} editable={editable(task)} onStatusChange={handleStatusChange} />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <DataTable
-          columns={columns}
-          rows={tasks}
-          rowKey={(t) => t.id}
-          gridLines="rows"
-          storageKey="projects-tasks-columns"
-          showExportCsv
-          exportFileName="tasks"
-        />
-      )}
-
-      <div className="grid">
-        <ShowMore show={!!hasNextPage} loading={isFetchingNextPage} onClick={() => void fetchNextPage()} />
+      <div className="flex rounded-md border border-border p-0.5 sm:inline-flex" role="tablist" aria-label="Task views">
+        {VIEWS.map((v) => (
+          <button
+            key={v.key}
+            type="button"
+            role="tab"
+            aria-selected={view === v.key}
+            onClick={() => url.setValue('view', v.key === 'board' ? null : v.key)}
+            className={cn(
+              'inline-flex h-10 flex-1 items-center justify-center gap-2 rounded px-3 text-sm sm:h-8 sm:flex-none',
+              view === v.key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent',
+            )}
+          >
+            <v.icon className="h-4 w-4" aria-hidden />
+            {v.label}
+          </button>
+        ))}
       </div>
 
-      {showCreate && (
-        <CreateTaskModal onClose={() => setShowCreate(false)} onSubmit={handleCreate} isPending={createTask.isPending} />
+      {view !== 'calendar' && <TaskFilterBar state={filters} onChange={updateFilters} statuses={columns} people={people} showStatus={view === 'list'} />}
+
+      {view === 'board' && (
+        <BoardView
+          orgSlug={orgSlug}
+          projectId={projectId}
+          statuses={columns}
+          filters={boardFilters}
+          access={access}
+          nameOf={nameOf}
+          onOpenTask={(id) => url.open(id)}
+          onAdd={(status) => setCreating({ status })}
+        />
       )}
+      {view === 'list' && <ListView orgSlug={orgSlug} projectId={projectId} filters={filters.current} statuses={columns} nameOf={nameOf} onOpenTask={(id) => url.open(id)} />}
+      {view === 'calendar' && <CalendarView orgSlug={orgSlug} projectId={projectId} statuses={columns} access={access} onOpenTask={(id) => url.open(id)} />}
+
+      {creating && (
+        <CreateTaskDialog orgSlug={orgSlug} projectId={projectId} open onOpenChange={(o) => !o && setCreating(null)} initial={creating.status ? { status: creating.status } : undefined} />
+      )}
+      {editingColumns && (
+        <StatusEditor orgSlug={orgSlug} projectId={projectId} statuses={columns} counts={counts.data ?? []} open onOpenChange={(o) => !o && setEditingColumns(false)} />
+      )}
+      <TaskDrawer orgSlug={orgSlug} projectId={projectId} taskId={url.taskId} onClose={url.close} onOpenTask={(id) => url.open(id)} live={false} />
     </div>
   );
 }

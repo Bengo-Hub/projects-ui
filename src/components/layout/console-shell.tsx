@@ -11,6 +11,7 @@ import Header from '@/components/layout/header';
 import { PlatformScopeGuard } from '@/components/layout/platform-scope-guard';
 import { SubscriptionBanner } from '@/components/subscription/subscription-banner';
 import { VerifyEmailPrompt } from '@/components/auth/VerifyEmailPrompt';
+import { OfflineQueueBar } from '@/components/work/offline-queue-bar';
 import { navItemFor, navPathActive } from '@/lib/nav';
 
 const COLLAPSE_KEY = 'projects-sidebar-collapsed';
@@ -50,6 +51,7 @@ function subscribeCollapsed(onChange: () => void) {
  */
 export function ConsoleShell({ orgSlug, children }: { orgSlug: string; children: ReactNode }) {
   const session = useAuthStore((s) => s.session);
+  const userId = useAuthStore((s) => s.user?.id ?? '');
   const pathname = usePathname() ?? '';
   const collapsed = useSyncExternalStore(subscribeCollapsed, readCollapsed, () => false);
   const [drawer, setDrawer] = useState(false);
@@ -79,6 +81,7 @@ export function ConsoleShell({ orgSlug, children }: { orgSlug: string; children:
         <Sidebar orgSlug={orgSlug} collapsed={collapsed} onToggle={toggle} mobileOpen={drawer} onMobileOpenChange={setDrawer} />
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <Header orgSlug={orgSlug} title={item?.label} onMenu={() => setDrawer(true)} />
+          <OfflineQueueBar userId={userId} />
           <SubscriptionBanner />
           <VerifyEmailPrompt />
           {/* min-h-0 lets the main area scroll; the bottom padding clears the phone bottom bar. */}

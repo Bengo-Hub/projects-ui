@@ -17,8 +17,7 @@ Done: the service auth/me profile with the 404 fallback, the permission registry
 
 - Waiting on the main session: type check, lint, `pnpm test`, build and Playwright for these changes, including the new `e2e/access.spec.ts`.
 - Adding a person to the organisation from Roles and access (`POST /users`). I left it out until I decide how it sits beside the accounts site invite; today the page links to the accounts site.
-- The team page and committees still take a raw user id. They should pick people from `GET /rbac/users` with the shared SearchableCombobox.
-- Task detail drawer using the new GET task (comments and count). Sprint 12.
+- Adding a team member and committees still take a raw user id. They should pick people from `GET /rbac/users` with the shared SearchableCombobox. The team list itself now shows names.
 - The tenders list loads one page of 20; it needs Show more like tasks.
 
 ## Security
@@ -47,9 +46,14 @@ Screens built 13 November 2026 (see plan.md, "QA and acceptance"). Still open, e
 
 ## Tasks and collaboration
 
-- Task detail view with comments and attachments (hook exists, no page). Source: plan.md Sprint 2. Now sprint 12 (task drawer).
-- Activity feed on project and task pages. Source: plan.md Sprint 3. Now sprint 12, once the API writes activity (0b).
-- Board drag and drop, list and calendar views, Gantt chart, My Work, live updates. Source: Find, Flip, Fix 2026-11-16. Sprint 12.
+Sprint 12 screens built 2026-11-16 (see plan.md, "Sprint 12"): task drawer, several assignees, board with drag and drop and column editor, list with saved filters, calendar, Gantt chart with the critical path, My Work, live updates, offline status, comment and checklist edits, file uploads. Still open:
+
+- Waiting on the main session: `pnpm install` for `@dnd-kit/core` 6.3.1, type check, lint, `pnpm test` (`node-tests/work.test.ts`), build and Playwright (`e2e/work.spec.ts`).
+- Mention picker in comments. shared-ui-lib's RichTextEditor takes no extensions and has no Tiptap Mention, so I cannot type a mention yet. Mentions the API stores already show as chips. Needs a shared-ui-lib tag with an optional `mentions` prop (suggestion list of `{id, label}`, rendering `span[data-type="mention"][data-id][data-label]`); then the drawer passes the project members.
+- Waiting on the main session for the 2026-11-17 gap fixes (plan.md, "Gaps closed"): type check, lint, `pnpm test` and Playwright, including the new phone long press spec, which runs on the Chromium phone project only.
+- Task files on the files page show their task's title only when that task is already cached; otherwise they read "A task" (still linked). A `task_title` on the attachment list from projects-api would fix it in one batched read.
+- The calendar still picks agenda or grid after hydration (the same `useMediaQuery` answer the Gantt page used to flash on). It could take the Gantt page's CSS approach if anyone notices.
+- Project activity feed on the project page. Source: plan.md Sprint 3.
 - Time tracking: timer and week timesheet, posting to ERP. Source: plan.md Sprint 3. Now sprint 13.
 - Client portal. Sprint 14.
 - Billing and profitability screens. Sprint 15.

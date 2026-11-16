@@ -33,6 +33,7 @@ export default function ProjectDetailPage() {
   const hasGantt = useFeature('gantt_chart');
   const hasMilestoneBilling = useFeature('milestone_billing');
   const hasBudgetTracking = useFeature('budget_tracking');
+  const hasCollaboration = useFeature('team_collaboration');
 
   if (isLoading) return <PageLoading />;
   if (isNotFound(error)) return <ProjectNotFound orgSlug={orgSlug} />;
@@ -48,6 +49,12 @@ export default function ProjectDetailPage() {
       perm: PERMS.milestonesView,
     },
     { href: `/${orgSlug}/projects/${projectId}/team`, label: 'Team', perm: PERMS.membersView },
+    {
+      href: `/${orgSlug}/projects/${projectId}/files`,
+      label: 'Files',
+      locked: !hasCollaboration,
+      perm: PERMS.commentsView,
+    },
     {
       href: `/${orgSlug}/projects/${projectId}/gantt`,
       label: 'Gantt',

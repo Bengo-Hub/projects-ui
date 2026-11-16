@@ -25,9 +25,9 @@ export interface Task {
   project_id: string;
   title: string;
   description?: string;
-  status: string; // todo, in_progress, review, done
+  /** A key of the project's statuses (GET /projects/{id}/statuses). */
+  status: string;
   priority: string; // low, medium, high, critical
-  assignee_id?: string;
   due_date?: string;
   start_date?: string;
   estimated_hours?: number;
@@ -40,7 +40,61 @@ export interface Task {
   metadata?: Record<string, unknown>;
   edges?: {
     dependencies?: TaskDependency[];
+    /** Everyone assigned, primary first. */
+    assignees?: TaskAssignee[];
+    /** Set on My Work rows, which span projects. */
+    project?: { id: string; name: string };
   };
+}
+
+export interface TaskAssignee {
+  user_id: string;
+  is_primary: boolean;
+}
+
+/** One board column: category groups statuses for progress and My Work. */
+export interface ProjectStatus {
+  key: string;
+  label: string;
+  category: 'todo' | 'in_progress' | 'done';
+  order: number;
+}
+
+export interface BoardCount {
+  status: string;
+  count: number;
+}
+
+export type MyWorkBucket = 'overdue' | 'today' | 'week' | 'later';
+export type MyWorkCounts = Record<MyWorkBucket, number>;
+
+/** A checklist line kept in task metadata under "checklist". */
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+/** A stored file with a signed download link (15 minutes). */
+export interface Attachment {
+  id: string;
+  tenant_id: string;
+  project_id: string;
+  task_id?: string;
+  file_name: string;
+  file_size: number;
+  mime_type: string;
+  uploaded_by: string;
+  uploaded_at: string;
+  url: string;
+}
+
+/** POST /attachments/uploads: where to PUT the file, then confirm with key. */
+export interface UploadTicket {
+  key: string;
+  upload: { url: string; method: string; headers: Record<string, string>; expires_at?: string };
+  max_bytes: number;
+  allowed_types: string[];
 }
 
 /** GET /projects/{id}/tasks/{taskId}: the task, its latest 50 comments oldest first, and the count. */
@@ -78,6 +132,9 @@ export interface ProjectMember {
   role_code: string;
   joined_at: string;
   left_at?: string;
+  /** From the API's copy of the SSO identity; empty until the person first signs in to projects. */
+  name: string;
+  email: string;
 }
 
 export interface Comment {
@@ -86,6 +143,8 @@ export interface Comment {
   project_id: string;
   task_id?: string;
   user_id: string;
+  /** The author's name, empty for someone who never signed in to projects. */
+  author_name: string;
   content: string;
   created_at: string;
   updated_at: string;
@@ -97,6 +156,8 @@ export interface Activity {
   project_id: string;
   task_id?: string;
   user_id: string;
+  /** Who made the change; empty for a service call or someone who never signed in to projects. */
+  actor_name: string;
   activity_type: string;
   payload?: Record<string, unknown>;
   occurred_at: string;
@@ -207,11 +268,18 @@ export interface ListResponse<T> {
   data: T[];
 }
 
+export interface GanttTask extends Task {
+  /** On the critical path over finish-to-start links. */
+  critical: boolean;
+}
+
 /** GET /projects/{id}/gantt: tasks with edges.dependencies, capped at limit (2000). */
 export interface GanttResponse {
-  data: Task[];
+  data: GanttTask[];
   truncated: boolean;
   limit: number;
+  /** Length of the critical path in days. */
+  critical_days: number;
 }
 
 export interface ProjectSummary {

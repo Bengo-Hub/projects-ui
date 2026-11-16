@@ -1,5 +1,13 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
+/** The body with the answer's headers, names lower-cased (Idempotent-Replayed). */
+function withHeaders<T>(r: AxiosResponse<T>): { data: T; headers: Record<string, string> } {
+  return {
+    data: r.data,
+    headers: Object.fromEntries(Object.entries(r.headers ?? {}).map(([k, v]) => [k.toLowerCase(), String(v)])),
+  };
+}
+
 class ApiClient {
   private instance: AxiosInstance;
   private accessToken: string | null = null;
@@ -116,6 +124,65 @@ class ApiClient {
   }
   public patch<T>(url: string, data?: unknown): Promise<T> {
     return this.instance.patch<T>(url, data).then((r: AxiosResponse<T>) => r.data);
+  }
+  /** A PATCH with extra headers (an Idempotency-Key) that also returns the answer's headers. */
+  public patchWithHeaders<T>(
+    url: string,
+    data: unknown,
+    headers: Record<string, string>,
+  ): Promise<{ data: T; headers: Record<string, string> }> {
+    return this.instance.patch<T>(url, data, { headers }).then(withHeaders);
+  }
+  /** A POST with extra headers (an Idempotency-Key) that also returns the answer's headers. */
+  public postWithHeaders<T>(
+    url: string,
+    data: unknown,
+    headers: Record<string, string>,
+  ): Promise<{ data: T; headers: Record<string, string> }> {
+    return this.instance.post<T>(url, data, { headers }).then(withHeaders);
+  }
+
+  /**
+   * Reads a Server-Sent Events stream with the same auth and tenant headers as every other call
+   * (EventSource cannot send an Authorization header). onEvent gets each event's name and data.
+   * Resolves when the server ends the stream; a 401 refreshes the token once and reopens.
+   */
+  public async stream(url: string, onEvent: (event: string, data: string) => void, signal?: AbortSignal): Promise<void> {
+    const { parseSSE } = await import('@/lib/work/sse');
+    const open = () => {
+      const headers: Record<string, string> = { Accept: 'text/event-stream' };
+      if (this.accessToken) headers.Authorization = `Bearer ${this.accessToken}`;
+      if (!this.platformOwner) {
+        if (this.tenantId) headers['X-Tenant-ID'] = this.tenantId;
+        if (this.tenantSlug) headers['X-Tenant-Slug'] = this.tenantSlug;
+      }
+      return fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ''}${url}`, { headers, signal, cache: 'no-store' });
+    };
+    let res = await open();
+    if (res.status === 401 && this.accessToken) {
+      const { refreshAccessToken } = await import('@/lib/auth/token-refresh');
+      const newToken = await refreshAccessToken(this.accessToken);
+      if (!newToken) {
+        this.on401Callback?.();
+        throw Object.assign(new Error('unauthorized'), { status: 401 });
+      }
+      this.accessToken = newToken;
+      res = await open();
+    }
+    if (!res.ok || !res.body) {
+      throw Object.assign(new Error(`stream failed (${res.status})`), { status: res.status });
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parsed = parseSSE(buffer);
+      buffer = parsed.rest;
+      for (const m of parsed.messages) onEvent(m.event, m.data);
+    }
   }
   public delete<T>(url: string): Promise<T> {
     return this.instance.delete<T>(url).then((r: AxiosResponse<T>) => r.data);

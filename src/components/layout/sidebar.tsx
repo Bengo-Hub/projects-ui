@@ -17,7 +17,8 @@ export function useNavFeatures(): Record<NonNullable<NavItem['subFeature']>, boo
   // The projects workspace (Projects, Tenders, Acceptance) is gated behind `project_management`.
   const project_management = useFeature('project_management');
   const budget_tracking = useFeature('budget_tracking');
-  return { project_management, budget_tracking };
+  const task_tracking = useFeature('task_tracking');
+  return { project_management, budget_tracking, task_tracking };
 }
 
 /** The nav groups this user may see, from the projects service permissions. */

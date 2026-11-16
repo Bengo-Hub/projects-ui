@@ -88,6 +88,89 @@ UI work for each API sprint:
 - **15:** billing and profitability screens.
 - **16:** workload, baselines, risks, change requests, templates and status rules.
 
+### Sprint 12: Work management core (UI built 2026-11-16, ships with projects-api 1ccc945)
+
+I built the screens people compare us with (Zoho, Asana, ClickUp), phone first at 390 px. The API
+contract is projects-api `docs/api.md`, "Work management". Waiting on the main session: install
+(`@dnd-kit/core` 6.3.1 is new), type check, lint, `pnpm test`, build and Playwright.
+
+- [x] **Task drawer (US-12.1).** Any view opens a task by `?task=<id>`, so the notification link
+  `/{org}/projects/{id}/tasks?task={id}` lands on it. It is a side sheet from 768 px and full screen
+  below. It holds title, status, priority, assignees, start and due dates, estimate, progress, the
+  rich text description, the checklist (task metadata `checklist`, changed one operation at a
+  time), subtasks, comments with "Show
+  older", files and the activity history. Delete asks first. `src/components/work/task-drawer.tsx`.
+- [x] **Several assignees (US-12.2).** `assignee_ids` in, `edges.assignees` out, primary first;
+  `assignee_id` is gone from the types. The picker is the shared MultiSelectCombobox over project
+  members only. Names come with the member list (see Gaps closed below).
+- [x] **Board (US-12.5).** Columns are the project statuses, each paging 25 at a time with Show
+  more, counts from `board-counts`. Dragging (`@dnd-kit/core`; a long press on phones, keyboard
+  too) moves the card at once with a fresh `Idempotency-Key` and rolls back on a refusal. Columns
+  scroll sideways on phones. People with `projects.projects.change` edit the columns: rename,
+  reorder, add, stage, never removing Done or a column that still holds tasks.
+- [x] **List and calendar (US-12.6).** The list is the shared DataTable with server side filters
+  (status, priority, assignee) and named saved filters kept per project in this browser. The
+  calendar shows month and week grids from 640 px and an agenda below; dragging a task to another
+  day sends `PATCH dates`. Only the shown window is fetched.
+- [x] **Gantt chart (US-12.7).** Bars, dependency arrows, the critical path in red with its length
+  in days, a today line, day, week and month zoom, drag to move or resize either end. A 409
+  `schedule_conflict` names the blocking tasks. Only rows in view are drawn, so 2,000 tasks stay
+  smooth. Below 640 px the plan is a list first with the chart one tap away. The `gantt_chart`
+  lock and the truncated notice stay.
+- [x] **My Work (US-12.8).** `/{org}/my-work`: counts and the four buckets in my time zone, each
+  paged, opening the drawer in place. In the sidebar and the phone bar (Tenders moved to More so
+  four tabs fit).
+- [x] **Live updates (US-12.9).** `GET /projects/{id}/stream` read with fetch (the API client's
+  `stream`, the same approach as erp-ui's payroll stream). Events carry ids only, so each one marks
+  the matching queries stale, bursts folded into one refetch every 300 ms. A reconnect backs off
+  from 1 s to 30 s and refetches everything for the project. Board, list, calendar, drawer and
+  Gantt all follow it; a dot in the header says whether it is live.
+- [x] **Offline edits (US-12.10).** Status moves, comments and checklist ticks run with
+  `networkMode: 'always'`. Offline, or with no answer, they go to a queue per user in
+  localStorage, keyed by their `Idempotency-Key` and dropped after 24 hours like the API's window.
+  The shared OfflineSyncBanner shows what is waiting, and the queue drains on reconnect, every 30
+  seconds and on "Sync now". A refused edit is dropped with a toast. Queued moves show on the card.
+- [x] **Files (US-12.4).** Ask for a presigned PUT, send the file straight to storage with exactly
+  the signed headers, then confirm. Remove asks first and needs your own file or
+  `comments.manage`.
+- [x] Tests: `node-tests/work.test.ts` (checklist, offline queue, Gantt layout, critical path and
+  conflict text, the stream parser, calendar and saved filters) and `e2e/work.spec.ts` with
+  `e2e/work-mocks.ts` (drawer from `?task=`, board drag with the key, members only picker, My Work,
+  Gantt critical path and conflict, upload).
+
+#### Gaps closed (2026-11-17, with the projects-api sprint 12 follow-up)
+
+- [x] **Names for everyone.** The member list now carries each member's name and email, so
+  `usePeople` reads names from it and no longer touches `GET /rbac/users`. Comments show
+  `author_name` and the activity history `actor_name` as the API sends them, with the member list
+  and then a short id as fallbacks (`src/lib/work/people.ts`). The team page shows names too.
+- [x] **Subtasks** come from `?parent_id=` a page of 25 at a time with Show more, instead of
+  reading 500 tasks and filtering them here.
+- [x] **Comment replays** send the comment's `Idempotency-Key` on the first post and on every
+  replay from the offline queue, so a post whose answer was lost never doubles.
+- [x] **Checklist operations.** Each tick, add, rename or removal is one `PATCH checklist`
+  operation with its own key. Ticks send the state wanted, never "flip", so a replay cannot undo
+  one. Offline operations queue in order (a newer one no longer replaces the waiting one), and the
+  drawer shows them applied until they are sent. A whole-list write is gone, and a stored queue
+  entry from the old shape is dropped on load.
+- [x] **Project files page** at `/{org}/projects/{id}/files`, linked from the project tabs (locked
+  without `team_collaboration`). It lists project and task files newest first on the shared
+  DataTable (cards on phones), links task files to their task, uploads to the project and removes
+  after a ConfirmDialog. The "Attach a file" button is shared with the drawer.
+- [x] **Gantt first paint.** `useMediaQuery` now answers undefined until it knows the width. While
+  it is unknown the page renders both the chart and the phone list and the `sm` breakpoint picks in
+  CSS, so a desktop paints the chart first; once known, only one stays mounted.
+- [x] **Phone board drag spec.** dnd-kit's TouchSensor reacts to real touch events, which
+  Playwright's own API cannot move. Chromium's DevTools protocol (`Input.dispatchTouchEvent`) sends
+  the same events a finger does, so the phone project now holds a card for 400 ms and drags it to
+  the next column.
+- [x] Tests: node tests for checklist operations (applied twice changes nothing), the queue, names,
+  files and the Gantt layout; Playwright for names without `rbac.manage`, checklist operations
+  and comment keys, `?parent_id`, the files page, the phone long press and the desktop Gantt.
+
+Open from this sprint, in `docs/backlog.md`: the mention picker (the shared editor has no mention
+extension yet).
+
 ### Sprint 1: Foundation & SSO
 - [x] Project scaffolding with Next.js 15.
 - [x] SSO integration with `auth-ui`.
@@ -95,11 +178,11 @@ UI work for each API sprint:
 
 ### Sprint 2: Task Management
 - [x] Kanban board implementation (tasks page).
-- [ ] Task detail view with comments and attachments. A `useComments` hook exists but no page uses it; there is no task detail page.
+- [x] Task detail view with comments and attachments: the sprint 12 task drawer.
 - [x] Milestone tracking.
 
 ### Sprint 3: Collaboration & Reporting
-- [ ] Real-time activity feed (the API has activity routes; the UI does not show them).
+- [ ] Real-time activity feed. A task's history shows in the drawer (sprint 12); a project feed is still open.
 - [ ] Project status reports.
 - [ ] Time tracking interface. Hours will come from ERP timesheets, not a projects time log.
 

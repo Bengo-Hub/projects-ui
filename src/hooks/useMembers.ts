@@ -7,11 +7,11 @@ import { onMutationError } from '@/lib/api/errors';
 
 const KEY = 'members';
 
-export function useMembers(orgSlug: string, projectId: string) {
+export function useMembers(orgSlug: string, projectId: string, enabled = true) {
   return useQuery({
     queryKey: [KEY, orgSlug, projectId],
     queryFn: () => membersApi.list(orgSlug, projectId),
-    enabled: !!orgSlug && !!projectId,
+    enabled: enabled && !!orgSlug && !!projectId,
   });
 }
 

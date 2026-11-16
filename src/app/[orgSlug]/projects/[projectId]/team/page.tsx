@@ -103,10 +103,17 @@ export default function TeamPage() {
   const columns = useMemo<DataTableColumn<ProjectMember>[]>(() => {
     const base: DataTableColumn<ProjectMember>[] = [
       {
-        key: 'user_id',
-        header: 'User ID',
+        key: 'name',
+        header: 'Member',
         primary: true,
-        render: (m) => <span className="break-all font-mono text-xs text-muted-foreground">{m.user_id}</span>,
+        sortable: true,
+        accessor: (m) => m.name || m.email || m.user_id,
+        render: (m) => (
+          <span className="min-w-0">
+            <span className="block truncate font-medium">{m.name || m.email || 'Not signed in yet'}</span>
+            <span className="block truncate text-xs text-muted-foreground">{m.name && m.email ? m.email : m.user_id}</span>
+          </span>
+        ),
       },
       {
         key: 'role_code',
@@ -161,7 +168,7 @@ export default function TeamPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title={`Team (${members.length})`}
+        title={`Team (${data?.total ?? members.length})`}
         back={{ href: `/${orgSlug}/projects/${projectId}`, label: 'Project' }}
         className="mb-0"
         actions={addButton}

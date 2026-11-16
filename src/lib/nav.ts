@@ -1,4 +1,4 @@
-import { ClipboardCheck, FileText, FolderKanban, KeyRound, LayoutDashboard, PieChart, ShieldCheck, type LucideIcon } from 'lucide-react';
+import { ClipboardCheck, FileText, FolderKanban, KeyRound, LayoutDashboard, ListTodo, PieChart, ShieldCheck, type LucideIcon } from 'lucide-react';
 import { PERMS } from '@/lib/auth/permissions';
 
 export interface NavItem {
@@ -9,7 +9,7 @@ export interface NavItem {
   /** Short label for the phone bottom bar. */
   shortLabel?: string;
   /** Subscription feature code: shows an upgrade lock when the tenant's plan lacks it. */
-  subFeature?: 'project_management' | 'budget_tracking';
+  subFeature?: 'project_management' | 'budget_tracking' | 'task_tracking';
   /** Hidden unless the user holds one of these projects permissions (service auth/me). */
   permission?: readonly string[];
   /** Platform owner only. */
@@ -28,6 +28,7 @@ export const NAV: NavGroup[] = [
     label: 'Work',
     items: [
       { label: 'Dashboard', shortLabel: 'Home', path: '/dashboard', icon: LayoutDashboard, bottomNav: true },
+      { label: 'My work', path: '/my-work', icon: ListTodo, subFeature: 'task_tracking', permission: [PERMS.tasksView, PERMS.tasksViewOwn], bottomNav: true },
       { label: 'Projects', path: '/projects', icon: FolderKanban, subFeature: 'project_management', permission: [PERMS.projectsView], bottomNav: true },
       { label: 'Portfolio', path: '/portfolio', icon: PieChart, subFeature: 'budget_tracking', permission: [PERMS.financialsView], bottomNav: true },
     ],
@@ -35,7 +36,8 @@ export const NAV: NavGroup[] = [
   {
     label: 'Bids and delivery',
     items: [
-      { label: 'Tenders', path: '/tenders', icon: FileText, subFeature: 'project_management', permission: [PERMS.tendersView], bottomNav: true },
+      // Off the phone bar since My work joined it (four tabs and More fit 390 px); still in More.
+      { label: 'Tenders', path: '/tenders', icon: FileText, subFeature: 'project_management', permission: [PERMS.tendersView] },
       { label: 'Acceptance', path: '/qa', icon: ClipboardCheck, subFeature: 'project_management', permission: [PERMS.qaView] },
     ],
   },
