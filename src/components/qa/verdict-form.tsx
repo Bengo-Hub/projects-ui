@@ -3,8 +3,11 @@
 import { useId } from 'react';
 import { cn } from '@/lib/utils';
 import { RESULT_LABELS, RESULT_ORDER, SEVERITY_LABELS, verdictProblem } from '@/lib/qa/logic';
+import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
 import { inputClass } from './fields';
 import type { QAResultValue, QAVerdictInput } from '@/types/qa';
+
+const SEVERITY_OPTIONS: ComboboxOption[] = [1, 2, 3, 4].map((s) => ({ value: String(s), label: SEVERITY_LABELS[s] }));
 
 const TONE: Record<QAResultValue, string> = {
   pass: 'peer-checked:border-green-600 peer-checked:bg-green-50 peer-checked:text-green-900',
@@ -63,25 +66,17 @@ export function VerdictForm({ label, value, onChange, disabled }: VerdictFormPro
 
       {chosen && v.result === 'fail' && (
         <div className="space-y-1">
-          <label htmlFor={`${id}-sev`} className="block text-sm font-medium">
+          <span id={`${id}-sev`} className="block text-sm font-medium">
             Severity
-          </label>
-          <select
-            id={`${id}-sev`}
-            className={inputClass}
-            value={v.severity ?? ''}
+          </span>
+          <SearchableCombobox
+            options={SEVERITY_OPTIONS}
+            value={v.severity != null ? String(v.severity) : ''}
             disabled={disabled}
-            aria-invalid={v.severity == null}
-            aria-describedby={problem ? `${id}-problem` : undefined}
-            onChange={(e) => onChange({ ...v, severity: e.target.value ? Number(e.target.value) : null })}
-          >
-            <option value="">Choose a severity</option>
-            {[1, 2, 3, 4].map((s) => (
-              <option key={s} value={s}>
-                {SEVERITY_LABELS[s]}
-              </option>
-            ))}
-          </select>
+            onChange={(next) => onChange({ ...v, severity: next ? Number(next) : null })}
+            placeholder="Choose a severity"
+            searchPlaceholder="Find a severity"
+          />
           <p className="text-xs text-muted-foreground">Severity 1 and 2 open a ticket for the team straight away.</p>
         </div>
       )}

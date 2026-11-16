@@ -1,10 +1,11 @@
 'use client';
 
 import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { formatDate } from '@bengo-hub/shared-ui-lib/format';
 import type { TaskTrendMonth } from '@/types';
 
-const monthLabel = (m: string) =>
-  new Date(`${m}-01T00:00:00`).toLocaleDateString('en-KE', { month: 'short', year: '2-digit' });
+// Month buckets are calendar months, so they format in UTC (no zone shift across a boundary).
+const monthLabel = (m: string) => formatDate(`${m}-15T00:00:00Z`, 'UTC', { month: 'short', year: '2-digit' });
 
 /** Tasks created and completed per month, with the overdue backlog at each month end. */
 export function TaskTrendChart({ data }: { data: TaskTrendMonth[] }) {

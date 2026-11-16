@@ -2,7 +2,8 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { FolderKanban, CheckSquare, FileText, TrendingUp } from 'lucide-react';
+import { PageHeader } from '@/components/common/page-header';
+import { CountRow } from '@/components/common/list-parts';
 import { useProjectMetrics, useProjects } from '@/hooks/useProjects';
 import { useTenderMetrics, useTenders } from '@/hooks/useTenders';
 import { useTaskTrend } from '@/hooks/useTasks';
@@ -21,7 +22,7 @@ export default function DashboardPage() {
   const { data: projectMetrics, isLoading: metricsLoading, isError: projectsError } = useProjectMetrics(orgSlug);
   const { data: tenderMetrics } = useTenderMetrics(orgSlug);
   const { data: projectsData } = useProjects(orgSlug, { limit: 5 });
-  const { data: tendersData } = useTenders(orgSlug, { page_size: 5 });
+  const { data: tendersData } = useTenders(orgSlug, { limit: 5 });
   const { data: trend = [] } = useTaskTrend(orgSlug, undefined, 6);
 
   const projects = projectsData?.data ?? [];
@@ -35,66 +36,16 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground text-sm">Overview of projects and tenders</p>
-      </div>
+      <PageHeader title="Dashboard" subtitle="Overview of projects and tenders" className="mb-0" />
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-blue-100 p-2">
-                <FolderKanban className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{projectMetrics?.total ?? 0}</p>
-                <p className="text-xs text-muted-foreground">Total Projects</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-green-100 p-2">
-                <CheckSquare className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{activeProjects}</p>
-                <p className="text-xs text-muted-foreground">Active Projects</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-purple-100 p-2">
-                <FileText className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{tenderMetrics?.total ?? 0}</p>
-                <p className="text-xs text-muted-foreground">Total Tenders</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-amber-100 p-2">
-                <TrendingUp className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{awardedTenders}</p>
-                <p className="text-xs text-muted-foreground">Tenders Awarded</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <CountRow
+        items={[
+          { label: 'Total projects', value: projectMetrics?.total ?? 0 },
+          { label: 'Active projects', value: activeProjects },
+          { label: 'Total tenders', value: tenderMetrics?.total ?? 0 },
+          { label: 'Tenders awarded', value: awardedTenders },
+        ]}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Recent Projects */}

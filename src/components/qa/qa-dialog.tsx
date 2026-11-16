@@ -23,10 +23,13 @@ export function QADialog({ open, onOpenChange, title, description, children, cla
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
+        {/* Centred by a flex wrapper, not a transform: a transformed ancestor would offset the
+            shared combobox's fixed-position option panel. */}
+        <div className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
         <Dialog.Content
           className={cn(
-            'fixed inset-x-0 bottom-0 z-50 max-h-[92vh] overflow-y-auto rounded-t-xl bg-background p-4 shadow-lg',
-            'sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:p-6',
+            'pointer-events-auto relative max-h-[92dvh] w-full overflow-y-auto rounded-t-xl bg-background p-4 shadow-lg',
+            'sm:max-w-lg sm:rounded-xl sm:p-6',
             className,
           )}
           {...(description ? {} : { 'aria-describedby': undefined })}
@@ -47,6 +50,7 @@ export function QADialog({ open, onOpenChange, title, description, children, cla
           </div>
           {children}
         </Dialog.Content>
+        </div>
       </Dialog.Portal>
     </Dialog.Root>
   );

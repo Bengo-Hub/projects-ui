@@ -14,6 +14,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageLoading } from '@/components/ui/loading';
 import { ErrorBanner } from '@/components/ui/error-banner';
 import { EmptyState } from '@/components/ui/empty-state';
+import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
+import { PageHeader } from '@/components/common/page-header';
+import { ConfirmDialog } from '@/components/common/confirm-dialog';
+
+const COMMITTEE_ROLES: ComboboxOption[] = [
+  { value: 'chair', label: 'Chair' },
+  { value: 'member', label: 'Member' },
+  { value: 'secretary', label: 'Secretary' },
+];
 
 export default function CommitteesPage() {
   const params = useParams();
@@ -41,9 +50,7 @@ export default function CommitteesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Committees</h2>
-      </div>
+      <PageHeader title="Committees" back={{ href: `/${orgSlug}/tenders/${tenderId}`, label: 'Tender' }} className="mb-0" />
 
       {/* Create committee */}
       <Card>
@@ -105,6 +112,7 @@ function CommitteeCard({
   const removeMember = useRemoveCommitteeMember(orgSlug, tenderId, committee.id);
   const members = committee.edges?.members ?? [];
   const localState = addMemberState[committee.id] ?? { userId: '', role: 'member' };
+  const [removing, setRemoving] = useState<string | null>(null);
 
   function handleAddMember(e: React.FormEvent) {
     e.preventDefault();
@@ -128,8 +136,10 @@ function CommitteeCard({
                 <div className="flex items-center gap-2">
                   <span className="capitalize text-xs">{m.role}</span>
                   <button
-                    onClick={() => removeMember.mutate(m.user_id)}
-                    className="text-muted-foreground hover:text-destructive"
+                    type="button"
+                    onClick={() => setRemoving(m.user_id)}
+                    aria-label="Remove member"
+                    className="rounded p-1 text-muted-foreground hover:text-destructive"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -141,27 +151,37 @@ function CommitteeCard({
           <p className="text-xs text-muted-foreground">No members yet</p>
         )}
 
-        <form onSubmit={handleAddMember} className="flex gap-2 pt-1">
+        <form onSubmit={handleAddMember} className="flex flex-col gap-2 pt-1 sm:flex-row">
           <input
             type="text"
+            aria-label="User ID"
             value={localState.userId}
             onChange={(e) => setAddMemberState((s) => ({ ...s, [committee.id]: { ...localState, userId: e.target.value } }))}
-            className="flex-1 border border-border rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+            className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-base focus:outline-none focus:ring-1 focus:ring-ring sm:text-xs"
             placeholder="User ID"
           />
-          <select
+          <SearchableCombobox
+            options={COMMITTEE_ROLES}
             value={localState.role}
-            onChange={(e) => setAddMemberState((s) => ({ ...s, [committee.id]: { ...localState, role: e.target.value } }))}
-            className="border border-border rounded-md px-2 py-1.5 text-xs focus:outline-none"
-          >
-            <option value="chair">Chair</option>
-            <option value="member">Member</option>
-            <option value="secretary">Secretary</option>
-          </select>
+            onChange={(v) => setAddMemberState((s) => ({ ...s, [committee.id]: { ...localState, role: v || 'member' } }))}
+            clearable={false}
+            searchPlaceholder="Find a role"
+            className="w-full text-xs sm:w-36"
+          />
           <Button type="submit" size="sm" disabled={!localState.userId.trim() || addMember.isPending}>
             <Plus className="h-3.5 w-3.5" />
           </Button>
         </form>
+        <ConfirmDialog
+          open={!!removing}
+          onOpenChange={(o) => !o && setRemoving(null)}
+          title="Remove this committee member?"
+          description="They stop taking part in this committee's evaluations."
+          confirmLabel="Remove"
+          variant="danger"
+          loading={removeMember.isPending}
+          onConfirm={() => removing && removeMember.mutate(removing, { onSettled: () => setRemoving(null) })}
+        />
       </CardContent>
     </Card>
   );

@@ -1,18 +1,19 @@
 # Projects UI Backlog
 
-**Last updated:** 2026-09-27. Built by checking `docs/plan.md` against the code. Each item names its source. Items marked **In progress (plan budgets-planning-projects-bi-2026-09-27)** are being built now under `.claude/plans/budgets-planning-projects-bi-2026-09-27.md`; do not start them separately. Backend gaps live in `projects-service/projects-api/docs/backlog.md`.
+**Last updated:** 2026-11-16. Built by checking `docs/plan.md` against the code. Each item names its source. Backend gaps live in `projects-service/projects-api/docs/backlog.md`. Build order: `.claude/plans/projects-service-competitive-revamp-2026-11-16.md`.
 
-## Fixes
+## Foundation, sprint 0b (2026-11-16 audit)
 
-All In progress (plan budgets-planning-projects-bi-2026-09-27, Phase 0):
-
-- Tender metrics cards read the wrong shape: Awarded and Evaluating show 0 and Est. Value shows "NaNK". Source: budgets plan audit.
-- List pages send `page_size`, but the API reads `limit`. Source: budgets plan audit.
-- Drop the dual project summary field names. Source: budgets plan audit.
+- The root page redirects to itself.
+- No phone navigation: the sidebar is a fixed 256 px, with no drawer and no bottom nav.
+- Tailwind 3 does not scan shared-ui-lib, so shared components can render unstyled. Move to Tailwind 4 with `@source`, like the other apps.
+- Hand-built tables on the tasks, team, Gantt and portfolio pages; native selects across tasks, team, tenders, committees, portfolio and QA; a hand-made search box in the QA feature picker; local money formatting in `lib/utils.ts` and `toLocaleString` calls.
+- The header uses `bg-white` instead of theme tokens; form grids are fixed at two columns; the board does not scroll sideways on phones.
+- `packageManager` says pnpm 9 while the Dockerfile installs pnpm 10; the Radix packages are on `latest`.
 
 ## Project finance
 
-All In progress (plan budgets-planning-projects-bi-2026-09-27, Phase 6). The Financials tab and the portfolio dashboard gate on the existing projects feature code `budget_tracking` (T3), decided 2026-09-27.
+Done 2026-09-29 (plan budgets-planning-projects-bi-2026-09-27). The Financials tab and the portfolio dashboard gate on `budget_tracking`. The two older fixes (tender metrics shape and the `page_size` param) shipped with it.
 
 - Project Financials tab: CPI, SPI, EAC and VAC cards, S-curve of PV, EV and AC, cost breakdown, committed vs actual, budget edit through the proxy. Source: budgets plan.
 - Task estimate and progress fields. Source: budgets plan.
@@ -32,7 +33,11 @@ Screens built 13 November 2026 (see plan.md, "QA and acceptance"). Still open, e
 
 ## Tasks and collaboration
 
-- Task detail view with comments and attachments (hook exists, no page). Source: plan.md Sprint 2.
-- Activity feed on project and task pages. Source: plan.md Sprint 3.
-- Project status reports. Source: plan.md Sprint 3.
-- Time tracking view, fed by ERP timesheet hours. Source: plan.md Sprint 3.
+- Task detail view with comments and attachments (hook exists, no page). Source: plan.md Sprint 2. Now sprint 12 (task drawer).
+- Activity feed on project and task pages. Source: plan.md Sprint 3. Now sprint 12, once the API writes activity (0b).
+- Board drag and drop, list and calendar views, Gantt chart, My Work, live updates. Source: Find, Flip, Fix 2026-11-16. Sprint 12.
+- Time tracking: timer and week timesheet, posting to ERP. Source: plan.md Sprint 3. Now sprint 13.
+- Client portal. Sprint 14.
+- Billing and profitability screens. Sprint 15.
+- Workload, baselines, risks, change requests, templates, status rules. Sprint 16.
+- Project status reports. Source: plan.md Sprint 3. API sprint 7.

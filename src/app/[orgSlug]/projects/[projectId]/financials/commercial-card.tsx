@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUpdateProject } from '@/hooks/useProjects';
 import { projectsApi, type LookupOption } from '@/lib/api/projects';
 import type { BillingType, Commercial } from '@/lib/api/financials';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency } from '@bengo-hub/shared-ui-lib/format';
 
 const billingLabel: Record<BillingType, string> = {
   fixed: 'Fixed price',
@@ -162,18 +162,17 @@ function CommercialForm({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-1 text-sm">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-1 text-sm">
           <span className="text-xs text-muted-foreground">Billing</span>
-          <select className={inputClass} value={billing} onChange={(e) => setBilling(e.target.value as BillingType | '')}>
-            <option value="">Not set</option>
-            {(Object.keys(billingLabel) as BillingType[]).map((b) => (
-              <option key={b} value={b}>
-                {billingLabel[b]}
-              </option>
-            ))}
-          </select>
-        </label>
+          <SearchableCombobox
+            options={(Object.keys(billingLabel) as BillingType[]).map((b) => ({ value: b, label: billingLabel[b] }))}
+            value={billing}
+            onChange={(v) => setBilling(v as BillingType | '')}
+            placeholder="Not set"
+            searchPlaceholder="Find a billing type"
+          />
+        </div>
         {billing === 'fixed' && (
           <label className="space-y-1 text-sm">
             <span className="text-xs text-muted-foreground">Contract value</span>

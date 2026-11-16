@@ -9,7 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageLoading } from '@/components/ui/loading';
 import { ErrorBanner } from '@/components/ui/error-banner';
 import { EmptyState } from '@/components/ui/empty-state';
-import { format } from 'date-fns';
+import { formatDate } from '@bengo-hub/shared-ui-lib/format';
+import { PageHeader } from '@/components/common/page-header';
+import { RichTextField, RichTextView } from '@/components/common/rich-text';
 import type { CreateEvaluationInput } from '@/lib/api/tenders';
 
 function SubmitEvaluationModal({
@@ -29,8 +31,8 @@ function SubmitEvaluationModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-sm mx-4 p-6">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
+      <div className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-xl bg-card p-4 shadow-lg sm:mx-4 sm:rounded-xl sm:p-6">
         <h2 className="text-lg font-semibold mb-4">Submit Evaluation</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
@@ -56,13 +58,8 @@ function SubmitEvaluationModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Notes</label>
-            <textarea
-              value={form.notes ?? ''}
-              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              rows={3}
-            />
+            <span className="mb-1 block text-sm font-medium">Notes</span>
+            <RichTextField value={form.notes ?? ''} onChange={(html) => setForm((f) => ({ ...f, notes: html }))} ariaLabel="Notes" />
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isPending}>
@@ -101,18 +98,18 @@ export default function EvaluationsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold">Evaluations</h2>
-          {avgScore !== null && (
-            <p className="text-sm text-muted-foreground">Average score: {avgScore}/100</p>
-          )}
-        </div>
-        <Button size="sm" onClick={() => setShowSubmit(true)}>
-          <Plus className="h-4 w-4" />
-          Submit Evaluation
-        </Button>
-      </div>
+      <PageHeader
+        title="Evaluations"
+        subtitle={avgScore !== null ? `Average score: ${avgScore}/100` : undefined}
+        back={{ href: `/${orgSlug}/tenders/${tenderId}`, label: 'Tender' }}
+        className="mb-0"
+        actions={
+          <Button size="sm" onClick={() => setShowSubmit(true)}>
+            <Plus className="h-4 w-4" />
+            Submit evaluation
+          </Button>
+        }
+      />
 
       {evaluations.length === 0 ? (
         <EmptyState
@@ -143,18 +140,16 @@ export default function EvaluationsPage() {
                         <span className="text-xs bg-secondary rounded px-1.5 py-0.5 capitalize">{ev.criteria}</span>
                       )}
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {format(new Date(ev.evaluated_at), 'MMM d, yyyy')}
-                    </span>
+                    <span className="text-xs text-muted-foreground">{formatDate(ev.evaluated_at)}</span>
                   </div>
                   {/* Score bar */}
                   <div className="h-1.5 w-full rounded-full bg-muted mt-2">
                     <div
-                      className={`h-1.5 rounded-full ${ev.score >= 70 ? 'bg-green-500' : ev.score >= 40 ? 'bg-amber-500' : 'bg-red-400'}`}
+                      className={`h-1.5 rounded-full ${ev.score >= 70 ? 'bg-success' : ev.score >= 40 ? 'bg-warning' : 'bg-destructive'}`}
                       style={{ width: `${ev.score}%` }}
                     />
                   </div>
-                  {ev.notes && <p className="text-xs text-muted-foreground mt-2">{ev.notes}</p>}
+                  {ev.notes && <RichTextView value={ev.notes} className="mt-2 text-xs text-muted-foreground" />}
                 </div>
               ))}
             </div>

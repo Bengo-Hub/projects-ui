@@ -12,7 +12,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PageLoading } from '@/components/ui/loading';
 import { ErrorBanner } from '@/components/ui/error-banner';
 import { EmptyState } from '@/components/ui/empty-state';
-import { format } from 'date-fns';
+import { formatDate } from '@bengo-hub/shared-ui-lib/format';
+import { PageHeader } from '@/components/common/page-header';
+import { RichTextField, RichTextView } from '@/components/common/rich-text';
 import type { CreateMilestoneInput } from '@/lib/api/milestones';
 
 function CreateMilestoneModal({
@@ -33,13 +35,14 @@ function CreateMilestoneModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-md mx-4 p-6">
-        <h2 className="text-lg font-semibold mb-4">New Milestone</h2>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
+      <div className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-xl bg-card p-4 shadow-lg sm:mx-4 sm:rounded-xl sm:p-6">
+        <h2 className="mb-4 text-lg font-semibold">New milestone</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-sm font-medium mb-1">Name *</label>
+            <label htmlFor="milestone-name" className="mb-1 block text-sm font-medium">Name *</label>
             <input
+              id="milestone-name"
               type="text"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -49,17 +52,17 @@ function CreateMilestoneModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Description</label>
-            <textarea
+            <span className="mb-1 block text-sm font-medium">Description</span>
+            <RichTextField
               value={form.description ?? ''}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              rows={2}
+              onChange={(html) => setForm((f) => ({ ...f, description: html }))}
+              ariaLabel="Description"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Target Date</label>
+            <label htmlFor="milestone-target" className="mb-1 block text-sm font-medium">Target date</label>
             <input
+              id="milestone-target"
               type="date"
               value={form.target_date ?? ''}
               onChange={(e) => setForm((f) => ({ ...f, target_date: e.target.value || undefined }))}
@@ -115,13 +118,17 @@ export default function MilestonesPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Milestones</h2>
-        <Button size="sm" onClick={() => setShowCreate(true)}>
-          <Plus className="h-4 w-4" />
-          Add Milestone
-        </Button>
-      </div>
+      <PageHeader
+        title="Milestones"
+        back={{ href: `/${orgSlug}/projects/${projectId}`, label: 'Project' }}
+        className="mb-0"
+        actions={
+          <Button size="sm" onClick={() => setShowCreate(true)}>
+            <Plus className="h-4 w-4" />
+            Add milestone
+          </Button>
+        }
+      />
 
       {milestones.length === 0 ? (
         <EmptyState
@@ -141,21 +148,17 @@ export default function MilestonesPage() {
             <div key={m.id} className="flex gap-4">
               {/* Timeline indicator */}
               <div className="flex flex-col items-center">
-                <div className={`h-3 w-3 rounded-full mt-1 ${m.status === 'completed' ? 'bg-green-500' : m.status === 'missed' ? 'bg-red-400' : 'bg-blue-400'}`} />
+                <div className={`mt-1 h-3 w-3 rounded-full ${m.status === 'completed' ? 'bg-success' : m.status === 'missed' ? 'bg-destructive' : 'bg-primary'}`} />
                 {idx < milestones.length - 1 && <div className="w-px flex-1 bg-border mt-1" />}
               </div>
               <Card className="flex-1 mb-2">
                 <CardContent className="py-3">
                   <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold">{m.name}</p>
-                      {m.description && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{m.description}</p>
-                      )}
+                    <div className="min-w-0">
+                      <p className="break-words text-sm font-semibold">{m.name}</p>
+                      {m.description && <RichTextView value={m.description} className="mt-0.5 text-xs text-muted-foreground" />}
                       {m.target_date && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Target: {format(new Date(m.target_date), 'MMM d, yyyy')}
-                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">Target: {formatDate(m.target_date)}</p>
                       )}
                     </div>
                     <Badge status={m.status} className="shrink-0" />

@@ -1,26 +1,40 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, List, LayoutGrid } from 'lucide-react';
+import { DataTable, type DataTableColumn } from '@bengo-hub/shared-ui-lib/data-table';
+import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
+import { formatDate } from '@bengo-hub/shared-ui-lib/format';
 import { useTasks, useCreateTask, useUpdateTask } from '@/hooks/useTasks';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { PageLoading } from '@/components/ui/loading';
 import { ErrorBanner } from '@/components/ui/error-banner';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/common/page-header';
+import { RichTextField } from '@/components/common/rich-text';
 import type { Task } from '@/types';
 import type { CreateTaskInput } from '@/lib/api/tasks';
 
 const KANBAN_COLS = [
-  { status: 'todo', label: 'To Do' },
-  { status: 'in_progress', label: 'In Progress' },
+  { status: 'todo', label: 'To do' },
+  { status: 'in_progress', label: 'In progress' },
   { status: 'review', label: 'Review' },
   { status: 'done', label: 'Done' },
 ] as const;
 
-type KanbanStatus = (typeof KANBAN_COLS)[number]['status'];
+const STATUS_OPTIONS: ComboboxOption[] = KANBAN_COLS.map((c) => ({ value: c.status, label: c.label }));
+const PRIORITY_OPTIONS: ComboboxOption[] = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'critical', label: 'Critical' },
+];
+const PROGRESS_OPTIONS: ComboboxOption[] = [0, 10, 25, 50, 75, 90].map((p) => ({ value: String(p), label: `${p}%` }));
+
+const inputClass =
+  'w-full rounded-md border border-border bg-background px-3 py-2 text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-ring';
 
 function CreateTaskModal({
   onClose,
@@ -40,67 +54,65 @@ function CreateTaskModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-md mx-4 p-6">
-        <h2 className="text-lg font-semibold mb-4">New Task</h2>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
+      <div className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-xl bg-card p-4 shadow-lg sm:mx-4 sm:rounded-xl sm:p-6">
+        <h2 className="mb-4 text-lg font-semibold">New task</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-sm font-medium mb-1">Title *</label>
+            <label htmlFor="task-title" className="mb-1 block text-sm font-medium">Title *</label>
             <input
+              id="task-title"
               type="text"
               value={form.title}
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className={inputClass}
               placeholder="Task title"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Description</label>
-            <textarea
+            <span className="mb-1 block text-sm font-medium">Description</span>
+            <RichTextField
               value={form.description ?? ''}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              rows={2}
+              onChange={(html) => setForm((f) => ({ ...f, description: html }))}
+              ariaLabel="Description"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium mb-1">Priority</label>
-              <select
+              <span className="mb-1 block text-sm font-medium">Priority</span>
+              <SearchableCombobox
+                options={PRIORITY_OPTIONS}
                 value={form.priority ?? 'medium'}
-                onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value }))}
-                className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
-              </select>
+                onChange={(v) => setForm((f) => ({ ...f, priority: v || 'medium' }))}
+                clearable={false}
+                searchPlaceholder="Find a priority"
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Due Date</label>
+              <label htmlFor="task-due" className="mb-1 block text-sm font-medium">Due date</label>
               <input
+                id="task-due"
                 type="date"
                 value={form.due_date ?? ''}
                 onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value || undefined }))}
-                className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                className={inputClass}
               />
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Start Date</label>
+              <label htmlFor="task-start" className="mb-1 block text-sm font-medium">Start date</label>
               <input
+                id="task-start"
                 type="date"
                 value={form.start_date ?? ''}
                 onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value || undefined }))}
-                className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                className={inputClass}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Estimate (hours)</label>
+              <label htmlFor="task-estimate" className="mb-1 block text-sm font-medium">Estimate (hours)</label>
               <input
+                id="task-estimate"
                 type="number"
                 min={0}
                 step={0.5}
@@ -108,7 +120,7 @@ function CreateTaskModal({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, estimated_hours: e.target.value === '' ? undefined : Number(e.target.value) }))
                 }
-                className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                className={inputClass}
                 placeholder="e.g. 8"
               />
             </div>
@@ -121,7 +133,7 @@ function CreateTaskModal({
               Cancel
             </Button>
             <Button type="submit" size="sm" disabled={isPending || !form.title.trim()}>
-              {isPending ? 'Creating...' : 'Create Task'}
+              {isPending ? 'Creating...' : 'Create task'}
             </Button>
           </div>
         </form>
@@ -132,25 +144,20 @@ function CreateTaskModal({
 
 function KanbanCard({ task, onStatusChange }: { task: Task; onStatusChange: (id: string, status: string) => void }) {
   return (
-    <div className="rounded-md border border-border bg-white p-3 shadow-sm space-y-2">
-      <p className="text-sm font-medium">{task.title}</p>
+    <div className="space-y-2 rounded-md border border-border bg-card p-3 shadow-sm">
+      <p className="break-words text-sm font-medium">{task.title}</p>
       <div className="flex items-center justify-between gap-2">
         <Badge status={task.priority} />
-        {task.due_date && (
-          <span className="text-xs text-muted-foreground">
-            {new Date(task.due_date).toLocaleDateString()}
-          </span>
-        )}
+        {task.due_date && <span className="text-xs text-muted-foreground">{formatDate(task.due_date)}</span>}
       </div>
-      <select
+      <SearchableCombobox
+        options={STATUS_OPTIONS}
         value={task.status}
-        onChange={(e) => onStatusChange(task.id, e.target.value)}
-        className="w-full text-xs border border-border rounded px-1.5 py-1 focus:outline-none"
-      >
-        {KANBAN_COLS.map((col) => (
-          <option key={col.status} value={col.status}>{col.label}</option>
-        ))}
-      </select>
+        onChange={(v) => v && v !== task.status && onStatusChange(task.id, v)}
+        clearable={false}
+        searchPlaceholder="Move to"
+        className="text-xs"
+      />
     </div>
   );
 }
@@ -172,12 +179,51 @@ export default function TasksPage() {
     createTask.mutate(input, { onSuccess: () => setShowCreate(false) });
   }
 
+  const columns = useMemo<DataTableColumn<Task>[]>(() => {
+    const changeProgress = (id: string, progress: number) => updateTask.mutate({ id, data: { progress_pct: progress } });
+    return [
+      { key: 'title', header: 'Title', primary: true, sortable: true, render: (t) => <span className="font-medium">{t.title}</span> },
+      { key: 'status', header: 'Status', sortable: true, filterable: true, mobileAction: true, render: (t) => <Badge status={t.status} /> },
+      { key: 'priority', header: 'Priority', sortable: true, filterable: true, render: (t) => <Badge status={t.priority} /> },
+      {
+        key: 'due_date',
+        header: 'Due date',
+        sortable: true,
+        accessor: (t) => t.due_date,
+        render: (t) => <span className="text-muted-foreground">{formatDate(t.due_date, null, { fallback: '—' })}</span>,
+      },
+      {
+        key: 'estimated_hours',
+        header: 'Estimate',
+        align: 'right',
+        sortable: true,
+        hideBelow: 'lg',
+        render: (t) => <span className="text-muted-foreground">{t.estimated_hours != null ? `${t.estimated_hours} h` : '—'}</span>,
+      },
+      {
+        key: 'progress_pct',
+        header: 'Progress',
+        exportable: true,
+        accessor: (t) => (t.status === 'done' ? 100 : t.progress_pct ?? 0),
+        render: (t) =>
+          t.status === 'done' ? (
+            <span className="text-xs text-success">100%</span>
+          ) : (
+            <SearchableCombobox
+              options={PROGRESS_OPTIONS}
+              value={String(t.progress_pct ?? 0)}
+              onChange={(v) => v !== '' && changeProgress(t.id, Number(v))}
+              clearable={false}
+              searchPlaceholder="Progress"
+              className="w-28 text-xs"
+            />
+          ),
+      },
+    ];
+  }, [updateTask]);
+
   function handleStatusChange(id: string, status: string) {
     updateTask.mutate({ id, data: { status } });
-  }
-
-  function handleProgressChange(id: string, progress: number) {
-    updateTask.mutate({ id, data: { progress_pct: progress } });
   }
 
   if (isLoading) return <PageLoading />;
@@ -185,31 +231,39 @@ export default function TasksPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Tasks</h2>
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-md border border-border">
-            <button
-              onClick={() => setView('list')}
-              className={`p-1.5 ${view === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'} rounded-l-md transition-colors`}
-              title="List view"
-            >
-              <List className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setView('kanban')}
-              className={`p-1.5 ${view === 'kanban' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'} rounded-r-md transition-colors`}
-              title="Kanban view"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-          </div>
-          <Button size="sm" onClick={() => setShowCreate(true)}>
-            <Plus className="h-4 w-4" />
-            Add Task
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Tasks"
+        back={{ href: `/${orgSlug}/projects/${projectId}`, label: 'Project' }}
+        className="mb-0"
+        actions={
+          <>
+            <div className="flex flex-none rounded-md border border-border" role="group" aria-label="View">
+              <button
+                type="button"
+                onClick={() => setView('list')}
+                aria-pressed={view === 'list'}
+                className={`rounded-l-md p-2 transition-colors ${view === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'}`}
+                aria-label="List view"
+              >
+                <List className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setView('kanban')}
+                aria-pressed={view === 'kanban'}
+                className={`rounded-r-md p-2 transition-colors ${view === 'kanban' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'}`}
+                aria-label="Kanban view"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+            </div>
+            <Button size="sm" onClick={() => setShowCreate(true)}>
+              <Plus className="h-4 w-4" />
+              Add task
+            </Button>
+          </>
+        }
+      />
 
       {tasks.length === 0 ? (
         <EmptyState
@@ -218,21 +272,22 @@ export default function TasksPage() {
           action={
             <Button size="sm" onClick={() => setShowCreate(true)}>
               <Plus className="h-4 w-4" />
-              Add Task
+              Add task
             </Button>
           }
         />
       ) : view === 'kanban' ? (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        // Phones scroll the columns sideways (each a fixed width); from lg they share the row.
+        <div className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0 lg:grid lg:grid-cols-4 lg:overflow-visible">
           {KANBAN_COLS.map(({ status, label }) => {
             const colTasks = tasks.filter((t) => t.status === status);
             return (
-              <div key={status} className="space-y-2">
+              <div key={status} className="w-[78vw] max-w-72 shrink-0 snap-start space-y-2 sm:w-64 lg:w-auto lg:max-w-none">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold">{label}</h3>
-                  <span className="text-xs text-muted-foreground rounded-full bg-muted px-2 py-0.5">{colTasks.length}</span>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{colTasks.length}</span>
                 </div>
-                <div className="space-y-2 min-h-[100px] rounded-md bg-muted/30 p-2">
+                <div className="min-h-[100px] space-y-2 rounded-md bg-muted/30 p-2">
                   {colTasks.map((task) => (
                     <KanbanCard key={task.id} task={task} onStatusChange={handleStatusChange} />
                   ))}
@@ -242,61 +297,19 @@ export default function TasksPage() {
           })}
         </div>
       ) : (
-        <Card>
-          <CardContent className="pt-0">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="py-3 text-left font-medium text-muted-foreground">Title</th>
-                  <th className="py-3 text-left font-medium text-muted-foreground">Status</th>
-                  <th className="py-3 text-left font-medium text-muted-foreground">Priority</th>
-                  <th className="py-3 text-left font-medium text-muted-foreground">Due Date</th>
-                  <th className="py-3 text-right font-medium text-muted-foreground">Estimate</th>
-                  <th className="py-3 text-left font-medium text-muted-foreground pl-4">Progress</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tasks.map((task) => (
-                  <tr key={task.id} className="border-b border-border last:border-0 hover:bg-accent/30">
-                    <td className="py-3 font-medium">{task.title}</td>
-                    <td className="py-3"><Badge status={task.status} /></td>
-                    <td className="py-3"><Badge status={task.priority} /></td>
-                    <td className="py-3 text-muted-foreground">
-                      {task.due_date ? new Date(task.due_date).toLocaleDateString() : '—'}
-                    </td>
-                    <td className="py-3 text-right text-muted-foreground">
-                      {task.estimated_hours != null ? `${task.estimated_hours} h` : "—"}
-                    </td>
-                    <td className="py-3 pl-4">
-                      {task.status === "done" ? (
-                        <span className="text-xs text-green-700">100%</span>
-                      ) : (
-                        <select
-                          value={task.progress_pct ?? 0}
-                          onChange={(e) => handleProgressChange(task.id, Number(e.target.value))}
-                          className="text-xs border border-border rounded px-1.5 py-1 focus:outline-none"
-                          aria-label="Progress"
-                        >
-                          {[0, 10, 25, 50, 75, 90].map((p) => (
-                            <option key={p} value={p}>{p}%</option>
-                          ))}
-                        </select>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
+        <DataTable
+          columns={columns}
+          rows={tasks}
+          rowKey={(t) => t.id}
+          gridLines="rows"
+          storageKey="projects-tasks-columns"
+          showExportCsv
+          exportFileName="tasks"
+        />
       )}
 
       {showCreate && (
-        <CreateTaskModal
-          onClose={() => setShowCreate(false)}
-          onSubmit={handleCreate}
-          isPending={createTask.isPending}
-        />
+        <CreateTaskModal onClose={() => setShowCreate(false)} onSubmit={handleCreate} isPending={createTask.isPending} />
       )}
     </div>
   );

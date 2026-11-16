@@ -49,7 +49,9 @@ import {
   shareLink,
   verdictProblem,
 } from '@/lib/qa/logic';
-import { cn, formatDate } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { SearchableCombobox } from '@bengo-hub/shared-ui-lib/combobox';
+import { formatDate } from '@bengo-hub/shared-ui-lib/format';
 import type { InviteInput } from '@/lib/api/qa';
 import type { QADefect, QARole, QASnapshotCriterion, QAVerdictInput } from '@/types/qa';
 
@@ -129,14 +131,14 @@ function InviteDialog({ open, onOpenChange, onSend, pending }: { open: boolean; 
               )}
             </Field>
             <Field label="Role">
-              {({ id }) => (
-                <select id={id} className={inputClass} value={r.role} onChange={(e) => setRows((rs) => rs.map((x, j) => (j === i ? { ...x, role: e.target.value as QARole } : x)))}>
-                  {(Object.keys(ROLE_LABELS) as QARole[]).map((role) => (
-                    <option key={role} value={role} title={ROLE_HELP[role]}>
-                      {ROLE_LABELS[role]}
-                    </option>
-                  ))}
-                </select>
+              {() => (
+                <SearchableCombobox
+                  options={(Object.keys(ROLE_LABELS) as QARole[]).map((role) => ({ value: role, label: ROLE_LABELS[role], description: ROLE_HELP[role] }))}
+                  value={r.role}
+                  onChange={(v) => v && setRows((rs) => rs.map((x, j) => (j === i ? { ...x, role: v as QARole } : x)))}
+                  clearable={false}
+                  searchPlaceholder="Find a role"
+                />
               )}
             </Field>
             <Button type="button" variant="ghost" size="icon" aria-label={`Remove person ${i + 1}`} disabled={rows.length === 1} onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}>
@@ -197,7 +199,8 @@ export default function QASessionPage() {
 
   const outcome = board.outcome.data;
   const results = useMemo(() => groupByCriterion(board.results.data?.data), [board.results.data]);
-  const defects = board.defects.data?.data ?? [];
+  const defectRows = board.defects.data?.data;
+  const defects = useMemo(() => defectRows ?? [], [defectRows]);
   const defectByCriterion = useMemo(() => new Map<string, QADefect>(defects.map((d) => [d.criterion_id, d])), [defects]);
   const invites = board.invites.data?.data ?? [];
 

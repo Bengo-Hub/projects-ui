@@ -2,7 +2,10 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Calendar, DollarSign, ExternalLink } from 'lucide-react';
+import { Calendar, DollarSign, ExternalLink } from 'lucide-react';
+import { formatCurrency, formatDate, formatDateTime } from '@bengo-hub/shared-ui-lib/format';
+import { PageHeader } from '@/components/common/page-header';
+import { RichTextView } from '@/components/common/rich-text';
 import { useTender } from '@/hooks/useTenders';
 import { useTenderCommittees } from '@/hooks/useTenders';
 import { useTenderMeetings } from '@/hooks/useTenders';
@@ -10,7 +13,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PageLoading } from '@/components/ui/loading';
 import { ErrorBanner } from '@/components/ui/error-banner';
-import { format } from 'date-fns';
 
 export default function TenderDetailPage() {
   const params = useParams();
@@ -34,29 +36,26 @@ export default function TenderDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link
-          href={`/${orgSlug}/tenders`}
-          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          All Tenders
-        </Link>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs text-muted-foreground font-mono mb-1">{tender.number}</p>
-            <h1 className="text-2xl font-bold">{tender.title}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{tender.client_name}</p>
-          </div>
-          <div className="flex gap-2">
+      <PageHeader
+        title={tender.title}
+        back={{ href: `/${orgSlug}/tenders`, label: 'All tenders' }}
+        subtitle={
+          <>
+            <span className="font-mono text-xs">{tender.number}</span>
+            <span className="block">{tender.client_name}</span>
+          </>
+        }
+        className="mb-0"
+        actions={
+          <div className="flex flex-none gap-2">
             <Badge status={tender.status} />
             <Badge status={tender.priority} />
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Sub-navigation */}
-      <div className="flex gap-1 border-b border-border">
+      <div className="-mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 scrollbar-hide sm:mx-0 sm:px-0">
         {subNav.map(({ href, label }) => (
           <Link
             key={href}
@@ -79,7 +78,7 @@ export default function TenderDetailPage() {
               {tender.description && (
                 <div>
                   <dt className="text-muted-foreground text-xs mb-1">Description</dt>
-                  <dd>{tender.description}</dd>
+                  <dd><RichTextView value={tender.description} /></dd>
                 </div>
               )}
               {tender.source && (
@@ -94,9 +93,7 @@ export default function TenderDetailPage() {
                     <DollarSign className="h-3.5 w-3.5" />
                     Estimated Value
                   </dt>
-                  <dd className="font-medium">
-                    {tender.currency} {tender.estimated_value.toLocaleString()}
-                  </dd>
+                  <dd className="font-medium tabular">{formatCurrency(tender.estimated_value, tender.currency || 'KES')}</dd>
                 </div>
               )}
               {tender.deadline && (
@@ -105,7 +102,7 @@ export default function TenderDetailPage() {
                     <Calendar className="h-3.5 w-3.5" />
                     Deadline
                   </dt>
-                  <dd className="font-medium">{format(new Date(tender.deadline), 'MMM d, yyyy')}</dd>
+                  <dd className="font-medium">{formatDate(tender.deadline)}</dd>
                 </div>
               )}
               <div className="flex justify-between">
@@ -115,12 +112,12 @@ export default function TenderDetailPage() {
               {tender.submitted_at && (
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Submitted At</dt>
-                  <dd className="font-medium">{format(new Date(tender.submitted_at), 'MMM d, yyyy')}</dd>
+                  <dd className="font-medium">{formatDate(tender.submitted_at)}</dd>
                 </div>
               )}
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Created</dt>
-                <dd>{format(new Date(tender.created_at), 'MMM d, yyyy')}</dd>
+                <dd>{formatDate(tender.created_at)}</dd>
               </div>
             </dl>
           </CardContent>
@@ -169,7 +166,7 @@ export default function TenderDetailPage() {
                     <div key={m.id} className="text-sm border-b border-border last:border-0 pb-2">
                       <p className="font-medium">{m.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(m.scheduled_at), 'MMM d, yyyy HH:mm')} · {m.platform}
+                        {formatDateTime(m.scheduled_at)}, {m.platform}
                       </p>
                       {m.meeting_url && (
                         <a

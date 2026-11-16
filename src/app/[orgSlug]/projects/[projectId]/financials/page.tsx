@@ -1,9 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
-import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, ExternalLink, Lock } from 'lucide-react';
+import { ExternalLink, Lock } from 'lucide-react';
 import { useFeature } from '@bengo-hub/shared-ui-lib/subscription';
 import { useProjectFinancials } from '@/hooks/useFinancials';
 import { numOf, type EVM, type ProjectMoney } from '@/lib/api/financials';
@@ -12,7 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageLoading } from '@/components/ui/loading';
 import { ErrorBanner } from '@/components/ui/error-banner';
 import { UPGRADE_URL } from '@/components/subscription/subscription-banner';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency } from '@bengo-hub/shared-ui-lib/format';
+import { PageHeader } from '@/components/common/page-header';
+import { StatTile } from '@/components/common/stat-tile';
 import { CommercialCard } from './commercial-card';
 
 const TREASURY_UI = process.env.NEXT_PUBLIC_TREASURY_UI_URL ?? 'https://books.codevertexafrica.com';
@@ -31,15 +32,7 @@ const healthLabel: Record<EVM['health'], string> = {
 };
 
 function Stat({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: string }) {
-  return (
-    <Card>
-      <CardContent className="pt-5">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className={`text-lg font-bold ${tone ?? ''}`}>{value}</p>
-        {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
-      </CardContent>
-    </Card>
-  );
+  return <StatTile label={label} value={<span className={tone}>{value}</span>} hint={hint} />;
 }
 
 /** Index figures: 1.00 is on plan; below 1 is over cost (CPI) or behind (SPI). */
@@ -81,20 +74,10 @@ export default function ProjectFinancialsPage() {
     [data?.money],
   );
 
-  const back = (
-    <Link
-      href={`/${orgSlug}/projects/${projectId}`}
-      className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-    >
-      <ArrowLeft className="h-4 w-4" />
-      Back to project
-    </Link>
-  );
-
   if (!hasBudgetTracking) {
     return (
       <div className="space-y-4">
-        {back}
+        <PageHeader title="Financials" back={{ href: `/${orgSlug}/projects/${projectId}`, label: 'Back to project' }} className="mb-0" />
         <Card>
           <CardContent className="py-10 text-center space-y-3">
             <Lock className="mx-auto h-6 w-6 text-amber-600" />
@@ -125,25 +108,22 @@ export default function ProjectFinancialsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        {back}
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold">{data.name}: financials</h1>
-            <p className="text-sm text-muted-foreground">
-              Budget, cost and earned value. Costs come from the books in Finance, progress from this project&apos;s tasks.
-            </p>
-          </div>
-          <span className={`rounded-full border px-3 py-1 text-sm font-semibold ${healthStyle[evm.health]}`} title={evm.health_reason}>
+      <PageHeader
+        title={`${data.name}: financials`}
+        subtitle="Budget, cost and earned value. Costs come from the books in Finance, progress from this project's tasks."
+        back={{ href: `/${orgSlug}/projects/${projectId}`, label: 'Back to project' }}
+        className="mb-0"
+        actions={
+          <span className={`rounded-full border px-3 py-1 text-center text-sm font-semibold ${healthStyle[evm.health]}`} title={evm.health_reason}>
             {healthLabel[evm.health]}
             {evm.health_reason ? `: ${evm.health_reason}` : ''}
           </span>
-        </div>
-      </div>
+        }
+      />
 
       {data.money_error && <ErrorBanner message="Finance figures are unavailable right now; progress figures are shown without costs." />}
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Budget (cost)" value={formatCurrency(budgetCost, cur)} hint={money?.budget_status ? `Budget ${money.budget_status}` : 'No budget'} />
         <Stat label="Spent" value={formatCurrency(actualCost, cur)} hint={`${evm.percent_spent.toFixed(0)}% of budget`} />
         <Stat label="Committed" value={formatCurrency(committed, cur)} hint="Orders and bills not yet booked" />
@@ -180,7 +160,7 @@ export default function ProjectFinancialsPage() {
             }
           />
         )}
-      </div>
+      </dl>
 
       <CommercialCard orgSlug={orgSlug} projectId={projectId} commercial={data.commercial ?? { invoiced: 0 }} currency={cur} />
 

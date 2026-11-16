@@ -42,7 +42,37 @@
 
 ## Roadmap
 
-**Status (verified against code 2026-09-27):** Sprint 1 done; Sprint 2 partially done; Sprint 3 planned. Also shipped outside this roadmap: tenders (list, detail, committees, evaluations), project team, milestones and Gantt pages. Project financials, EVM, portfolio and tender pipeline are In progress (plan budgets-planning-projects-bi-2026-09-27). Open items: [backlog.md](backlog.md).
+**Status (verified against code 2026-11-16):** Sprint 1 done; Sprint 2 partly done; Sprint 3 planned. Also shipped outside this roadmap: tenders (list, detail, committees, evaluations), project team, milestones, a Gantt page (a dates table, not a chart yet), project financials with EVM and S-curve, the portfolio, QA and acceptance, and Security keys. Open items: [backlog.md](backlog.md). The UI sprints now follow the API numbering in `projects-api/plan.md` section 10 (0b, then 12 to 16), and the plan is `.claude/plans/projects-service-competitive-revamp-2026-11-16.md`.
+
+### Sprint 0b: UI foundation (in progress, 2026-11-16)
+I found these in the 2026-11-16 audit:
+- **Bugs and layout:**
+  - The root page redirected to itself.
+  - The sidebar was a fixed 256 px with no drawer or bottom nav, so a 390 px phone had about 134 px of content.
+- **Shared-ui-lib:**
+  - Tailwind 3 did not scan shared-ui-lib, so its components could render unstyled.
+  - shared-ui-lib was one minor version behind.
+- **Hand-built code:**
+  - Four tables were built by hand.
+  - Native selects, a hand-made search box and local money formatting were used instead of the shared ones.
+
+The fix:
+- Tailwind 4 with `@source` for shared-ui-lib and shared-ui-lib v0.1.146.
+- A console shell like maskani-ui's: collapsible sidebar, phone drawer and the shared `MobileBottomNav` with safe-area padding.
+- `PageHeader`, `StatTile` and list parts taken from maskani-ui and hadia-ui.
+- The shared `DataTable` (cards on phones), `SearchableCombobox`, `/search`, `/format` and `RichTextEditor` everywhere.
+- A Playwright mobile project at 390 px.
+- Sign-in and permissions follow `shared-docs/docs/architecture/sso-integration-guide.md` and `trinity-authorization-pattern.md`:
+  - **Profile:** two steps. First SSO `/auth/me` for identity, then the projects-api `auth/me` for the service role and `projects.*` codes, which drive the sidebar, page guards and buttons. Until now the app only made the first call, so permission checks could only see the global admin role.
+  - **403 handling:** a subscription 403 (`upgrade: true`) shows the upgrade message; a permission 403 goes to the unauthorized page.
+
+### Sprints 12 to 16
+UI work for each API sprint:
+- **12:** task drawer, board drag and drop, list and calendar views, Gantt chart, My Work, live updates.
+- **13:** timer and week timesheet.
+- **14:** client portal.
+- **15:** billing and profitability screens.
+- **16:** workload, baselines, risks, change requests, templates and status rules.
 
 ### Sprint 1: Foundation & SSO
 - [x] Project scaffolding with Next.js 15.

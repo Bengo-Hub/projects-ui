@@ -1,21 +1,35 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Plus, FolderKanban, Users, Calendar } from 'lucide-react';
+import { SearchableCombobox } from '@bengo-hub/shared-ui-lib/combobox';
+import { useDebouncedSearch } from '@bengo-hub/shared-ui-lib/search';
+import { formatDate } from '@bengo-hub/shared-ui-lib/format';
 import { useProjects, useCreateProject } from '@/hooks/useProjects';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PageLoading } from '@/components/ui/loading';
-import { ErrorBanner } from '@/components/ui/error-banner';
 import { EmptyState } from '@/components/ui/empty-state';
-import { format } from 'date-fns';
+import { PageHeader } from '@/components/common/page-header';
+import { ListError, ListFilters, ListSearch } from '@/components/common/list-parts';
+import { RichTextField, toPlainText } from '@/components/common/rich-text';
 import type { CreateProjectInput } from '@/lib/api/projects';
 
-const STATUS_TABS = ['all', 'active', 'on_hold', 'completed', 'cancelled'] as const;
-type StatusTab = (typeof STATUS_TABS)[number];
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Active' },
+  { value: 'on_hold', label: 'On hold' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
+// One page large enough for the search box to cover a normal portfolio; projects-api filters
+// by status server side and has no text search yet, so the search runs over this page.
+const PAGE_LIMIT = 100;
+
+const inputClass =
+  'w-full rounded-md border border-border bg-background px-3 py-2 text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-ring';
 
 function CreateProjectModal({
   onClose,
@@ -35,48 +49,50 @@ function CreateProjectModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-md mx-4 p-6">
-        <h2 className="text-lg font-semibold mb-4">New Project</h2>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
+      <div className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-xl bg-card p-4 shadow-lg sm:mx-4 sm:rounded-xl sm:p-6">
+        <h2 className="mb-4 text-lg font-semibold">New project</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-sm font-medium mb-1">Name *</label>
+            <label htmlFor="project-name" className="mb-1 block text-sm font-medium">Name *</label>
             <input
+              id="project-name"
               type="text"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className={inputClass}
               placeholder="Project name"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Description</label>
-            <textarea
-              value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              rows={3}
+            <span className="mb-1 block text-sm font-medium">Description</span>
+            <RichTextField
+              value={form.description ?? ''}
+              onChange={(html) => setForm((f) => ({ ...f, description: html }))}
               placeholder="Optional description"
+              ariaLabel="Description"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium mb-1">Start Date</label>
+              <label htmlFor="project-start" className="mb-1 block text-sm font-medium">Start date</label>
               <input
+                id="project-start"
                 type="date"
                 value={form.start_date ?? ''}
                 onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value || undefined }))}
-                className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                className={inputClass}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">End Date</label>
+              <label htmlFor="project-end" className="mb-1 block text-sm font-medium">End date</label>
               <input
+                id="project-end"
                 type="date"
                 value={form.end_date ?? ''}
                 onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value || undefined }))}
-                className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                className={inputClass}
               />
             </div>
           </div>
@@ -85,7 +101,7 @@ function CreateProjectModal({
               Cancel
             </Button>
             <Button type="submit" size="sm" disabled={isPending || !form.name.trim()}>
-              {isPending ? 'Creating...' : 'Create Project'}
+              {isPending ? 'Creating...' : 'Create project'}
             </Button>
           </div>
         </form>
@@ -97,14 +113,19 @@ function CreateProjectModal({
 export default function ProjectsPage() {
   const params = useParams();
   const orgSlug = (params?.orgSlug as string) ?? '';
-  const [activeTab, setActiveTab] = useState<StatusTab>('all');
+  const [status, setStatus] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const search = useDebouncedSearch();
 
-  const statusFilter = activeTab === 'all' ? undefined : activeTab;
-  const { data, isLoading, isError } = useProjects(orgSlug, { status: statusFilter });
+  const { data, isLoading, isError, error, refetch, isFetching } = useProjects(orgSlug, { status: status || undefined, limit: PAGE_LIMIT });
   const createProject = useCreateProject(orgSlug);
 
-  const projects = data?.data ?? [];
+  const projects = useMemo(() => {
+    const all = data?.data ?? [];
+    const term = search.term.toLowerCase();
+    if (!term) return all;
+    return all.filter((p) => p.name.toLowerCase().includes(term) || toPlainText(p.description).toLowerCase().includes(term));
+  }, [data, search.term]);
 
   function handleCreate(input: CreateProjectInput) {
     createProject.mutate(input, {
@@ -112,49 +133,56 @@ export default function ProjectsPage() {
     });
   }
 
-  if (isLoading) return <PageLoading />;
-  if (isError) return <ErrorBanner message="Failed to load projects." />;
+  const filtered = !!status || !!search.term;
+  const statusLabel = STATUS_OPTIONS.find((o) => o.value === status)?.label.toLowerCase();
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Projects</h1>
-          <p className="text-sm text-muted-foreground">{data?.total ?? 0} total projects</p>
-        </div>
-        <Button onClick={() => setShowCreate(true)} size="sm">
-          <Plus className="h-4 w-4" />
-          New Project
-        </Button>
+    <div className="space-y-5">
+      <PageHeader
+        title="Projects"
+        subtitle={`${data?.total ?? 0} ${status ? statusLabel : 'total'} projects`}
+        className="mb-0"
+        actions={
+          <Button onClick={() => setShowCreate(true)} size="sm">
+            <Plus className="h-4 w-4" />
+            New project
+          </Button>
+        }
+      />
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+        <ListSearch search={search} label="Search projects" busy={isFetching} />
+        <ListFilters active={status ? 1 : 0} className="w-full sm:w-52">
+          <SearchableCombobox
+            options={STATUS_OPTIONS}
+            value={status}
+            onChange={(v) => setStatus(v)}
+            placeholder="All statuses"
+            searchPlaceholder="Find a status"
+          />
+        </ListFilters>
       </div>
 
-      {/* Status tabs */}
-      <div className="flex gap-1 border-b border-border">
-        {STATUS_TABS.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-3 py-2 text-sm font-medium capitalize transition-colors ${
-              activeTab === tab
-                ? 'border-b-2 border-primary text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {tab.replace('_', ' ')}
-          </button>
-        ))}
-      </div>
-
-      {projects.length === 0 ? (
+      {isLoading ? (
+        <PageLoading />
+      ) : isError ? (
+        <ListError error={error} title="The projects could not be loaded." onRetry={() => void refetch()} />
+      ) : projects.length === 0 ? (
         <EmptyState
           icon={FolderKanban}
           title="No projects found"
-          description={activeTab === 'all' ? 'Create your first project to get started.' : `No ${activeTab.replace('_', ' ')} projects.`}
+          description={
+            search.term
+              ? `Nothing matches "${search.term}".`
+              : status
+                ? `No ${statusLabel} projects.`
+                : 'Create your first project to get started.'
+          }
           action={
-            activeTab === 'all' ? (
+            !filtered ? (
               <Button size="sm" onClick={() => setShowCreate(true)}>
                 <Plus className="h-4 w-4" />
-                New Project
+                New project
               </Button>
             ) : undefined
           }
@@ -162,17 +190,17 @@ export default function ProjectsPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <Link key={project.id} href={`/${orgSlug}/projects/${project.id}`}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+            <Link key={project.id} href={`/${orgSlug}/projects/${project.id}`} className="min-w-0">
+              <Card className="h-full cursor-pointer transition-shadow hover:shadow-md">
                 <CardContent className="pt-5">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="font-semibold text-sm line-clamp-2 flex-1">{project.name}</h3>
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <h3 className="line-clamp-2 min-w-0 flex-1 break-words text-sm font-semibold">{project.name}</h3>
                     <Badge status={project.status} className="shrink-0" />
                   </div>
                   {project.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{project.description}</p>
+                    <p className="mb-3 line-clamp-2 text-xs text-muted-foreground">{toPlainText(project.description)}</p>
                   )}
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground mt-3">
+                  <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
                     {project.edges?.members && (
                       <span className="flex items-center gap-1">
                         <Users className="h-3 w-3" />
@@ -182,7 +210,7 @@ export default function ProjectsPage() {
                     {project.end_date && (
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        {format(new Date(project.end_date), 'MMM d, yyyy')}
+                        {formatDate(project.end_date)}
                       </span>
                     )}
                   </div>

@@ -15,12 +15,20 @@ import { SessionStatusBadge } from '@/components/qa/qa-badges';
 import { useCreateQASession, useQAPermissions, useQASessions, useQATemplates } from '@/hooks/useQA';
 import { useProjects } from '@/hooks/useProjects';
 import { QA_PERMISSIONS } from '@/lib/qa/logic';
-import { formatDate } from '@/lib/utils';
+import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
+import { formatDate } from '@bengo-hub/shared-ui-lib/format';
+import { PageHeader } from '@/components/common/page-header';
 import type { CreateSessionInput } from '@/lib/api/qa';
 import type { QASession, QASessionStatus, QASessionSubject } from '@/types/qa';
 
 const STATUS_TABS = ['all', 'draft', 'open', 'closed', 'accepted', 'rejected'] as const;
 const PAGE_SIZE = 20;
+
+const SUBJECT_OPTIONS: ComboboxOption[] = [
+  { value: 'general', label: 'General work' },
+  { value: 'project', label: 'A project' },
+  { value: 'service', label: 'A Codevertex service' },
+];
 
 function subjectText(s: QASession): string {
   if (s.subject_kind === 'service') return `Service: ${s.subject_ref}`;
@@ -78,17 +86,19 @@ function CreateSessionDialog({ orgSlug, open, onOpenChange }: { orgSlug: string;
     <QADialog open={open} onOpenChange={onOpenChange} title="New acceptance session" description="The template's criteria and pass rule are frozen into the session.">
       <form onSubmit={submit} className="space-y-4" noValidate>
         <Field label="Template" required>
-          {({ id }) => (
-            <select id={id} className={inputClass} value={form.template_id} onChange={(e) => pickTemplate(e.target.value)}>
-              <option value="">{templates.isLoading ? 'Loading templates...' : usable.length ? 'Choose a template' : 'No templates yet'}</option>
-              {usable.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                  {t.tenant_id ? '' : ' (platform)'}
-                  {t.status === 'draft' ? ' (draft)' : ''}
-                </option>
-              ))}
-            </select>
+          {() => (
+            <SearchableCombobox
+              options={usable.map((t) => ({
+                value: t.id,
+                label: t.name,
+                hint: [t.tenant_id ? '' : 'platform', t.status === 'draft' ? 'draft' : ''].filter(Boolean).join(', ') || undefined,
+              }))}
+              value={form.template_id}
+              onChange={(v) => pickTemplate(v)}
+              loading={templates.isLoading}
+              placeholder={templates.isLoading ? 'Loading templates...' : usable.length ? 'Choose a template' : 'No templates yet'}
+              searchPlaceholder="Find a template"
+            />
           )}
         </Field>
         <Field label="Title" required>
@@ -97,30 +107,27 @@ function CreateSessionDialog({ orgSlug, open, onOpenChange }: { orgSlug: string;
           )}
         </Field>
         <Field label="What is accepted">
-          {({ id }) => (
-            <select
-              id={id}
-              className={inputClass}
+          {() => (
+            <SearchableCombobox
+              options={SUBJECT_OPTIONS}
               value={form.subject_kind}
-              onChange={(e) => setForm((f) => ({ ...f, subject_kind: e.target.value as QASessionSubject, subject_ref: '' }))}
-            >
-              <option value="general">General work</option>
-              <option value="project">A project</option>
-              <option value="service">A Codevertex service</option>
-            </select>
+              onChange={(v) => setForm((f) => ({ ...f, subject_kind: (v || 'general') as QASessionSubject, subject_ref: '' }))}
+              clearable={false}
+              searchPlaceholder="Find a subject"
+            />
           )}
         </Field>
         {form.subject_kind === 'project' && (
           <Field label="Project" required>
-            {({ id }) => (
-              <select id={id} className={inputClass} value={form.subject_ref} onChange={(e) => setForm((f) => ({ ...f, subject_ref: e.target.value }))}>
-                <option value="">{projects.isLoading ? 'Loading projects...' : 'Choose a project'}</option>
-                {(projects.data?.data ?? []).map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+            {() => (
+              <SearchableCombobox
+                options={(projects.data?.data ?? []).map((p) => ({ value: p.id, label: p.name }))}
+                value={form.subject_ref}
+                onChange={(v) => setForm((f) => ({ ...f, subject_ref: v }))}
+                loading={projects.isLoading}
+                placeholder={projects.isLoading ? 'Loading projects...' : 'Choose a project'}
+                searchPlaceholder="Find a project"
+              />
             )}
           </Field>
         )}
@@ -198,7 +205,7 @@ export default function QASessionsPage() {
       { key: 'subject', header: 'Accepts', accessor: subjectText, hideBelow: 'sm' },
       { key: 'criteria', header: 'Criteria', accessor: (s) => s.criteria_snapshot?.length ?? 0, align: 'right', hideBelow: 'md' },
       { key: 'created_at', header: 'Created', accessor: (s) => s.created_at, render: (s) => formatDate(s.created_at), hideBelow: 'md' },
-      { key: 'closed_at', header: 'Closed', accessor: (s) => s.closed_at, render: (s) => formatDate(s.closed_at), hideBelow: 'lg' },
+      { key: 'closed_at', header: 'Closed', accessor: (s) => s.closed_at, render: (s) => formatDate(s.closed_at, null, { fallback: '—' }), hideBelow: 'lg' },
     ],
     [orgSlug],
   );
@@ -211,18 +218,19 @@ export default function QASessionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Acceptance</h1>
-          <p className="text-sm text-muted-foreground">Run acceptance with invited testers and signers, and keep the signed report.</p>
-        </div>
-        {perms.canManage && (
-          <Button onClick={() => setShowCreate(true)} className="w-full sm:w-auto">
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            New session
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Acceptance"
+        subtitle="Run acceptance with invited testers and signers, and keep the signed report."
+        className="mb-0"
+        actions={
+          perms.canManage ? (
+            <Button onClick={() => setShowCreate(true)}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              New session
+            </Button>
+          ) : undefined
+        }
+      />
 
       <QANav orgSlug={orgSlug} />
 

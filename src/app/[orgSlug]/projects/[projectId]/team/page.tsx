@@ -1,16 +1,27 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, Users, Trash2 } from 'lucide-react';
+import { DataTable, type DataTableColumn } from '@bengo-hub/shared-ui-lib/data-table';
+import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
+import { formatDate } from '@bengo-hub/shared-ui-lib/format';
 import { useMembers, useAddMember, useRemoveMember } from '@/hooks/useMembers';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { PageLoading } from '@/components/ui/loading';
 import { ErrorBanner } from '@/components/ui/error-banner';
 import { EmptyState } from '@/components/ui/empty-state';
-import { format } from 'date-fns';
+import { PageHeader } from '@/components/common/page-header';
+import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import type { AddMemberInput } from '@/lib/api/members';
+import type { ProjectMember } from '@/types';
+
+const ROLE_OPTIONS: ComboboxOption[] = [
+  { value: 'owner', label: 'Owner' },
+  { value: 'manager', label: 'Manager' },
+  { value: 'member', label: 'Member' },
+  { value: 'viewer', label: 'Viewer' },
+];
 
 function AddMemberModal({
   onClose,
@@ -30,40 +41,38 @@ function AddMemberModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-sm mx-4 p-6">
-        <h2 className="text-lg font-semibold mb-4">Add Member</h2>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
+      <div className="max-h-[92dvh] w-full max-w-sm overflow-y-auto rounded-t-xl bg-card p-4 shadow-lg sm:mx-4 sm:rounded-xl sm:p-6">
+        <h2 className="mb-4 text-lg font-semibold">Add member</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-sm font-medium mb-1">User ID *</label>
+            <label htmlFor="member-user" className="mb-1 block text-sm font-medium">User ID *</label>
             <input
+              id="member-user"
               type="text"
               value={form.user_id}
               onChange={(e) => setForm((f) => ({ ...f, user_id: e.target.value }))}
-              className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-base focus:outline-none focus:ring-1 focus:ring-ring sm:text-sm"
               placeholder="User ID"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Role</label>
-            <select
+            <span className="mb-1 block text-sm font-medium">Role</span>
+            <SearchableCombobox
+              options={ROLE_OPTIONS}
               value={form.role_code}
-              onChange={(e) => setForm((f) => ({ ...f, role_code: e.target.value }))}
-              className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <option value="owner">Owner</option>
-              <option value="manager">Manager</option>
-              <option value="member">Member</option>
-              <option value="viewer">Viewer</option>
-            </select>
+              onChange={(v) => setForm((f) => ({ ...f, role_code: v || 'member' }))}
+              clearable={false}
+              searchPlaceholder="Find a role"
+            />
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isPending}>
               Cancel
             </Button>
             <Button type="submit" size="sm" disabled={isPending || !form.user_id.trim()}>
-              {isPending ? 'Adding...' : 'Add Member'}
+              {isPending ? 'Adding...' : 'Add member'}
             </Button>
           </div>
         </form>
@@ -77,12 +86,53 @@ export default function TeamPage() {
   const orgSlug = (params?.orgSlug as string) ?? '';
   const projectId = (params?.projectId as string) ?? '';
   const [showAdd, setShowAdd] = useState(false);
+  const [removing, setRemoving] = useState<ProjectMember | null>(null);
 
   const { data, isLoading, isError } = useMembers(orgSlug, projectId);
   const addMember = useAddMember(orgSlug, projectId);
   const removeMember = useRemoveMember(orgSlug, projectId);
 
   const members = data?.data ?? [];
+
+  const columns = useMemo<DataTableColumn<ProjectMember>[]>(
+    () => [
+      {
+        key: 'user_id',
+        header: 'User ID',
+        primary: true,
+        render: (m) => <span className="break-all font-mono text-xs text-muted-foreground">{m.user_id}</span>,
+      },
+      {
+        key: 'role_code',
+        header: 'Role',
+        sortable: true,
+        filterable: true,
+        render: (m) => <span className="rounded-md bg-secondary px-2 py-0.5 text-xs font-medium capitalize">{m.role_code}</span>,
+      },
+      { key: 'joined_at', header: 'Joined', sortable: true, render: (m) => <span className="text-muted-foreground">{formatDate(m.joined_at)}</span> },
+      {
+        key: 'actions',
+        header: <span className="sr-only">Actions</span>,
+        align: 'right',
+        exportable: false,
+        mobileAction: true,
+        render: (m) => (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setRemoving(m);
+            }}
+            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            aria-label="Remove member"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        ),
+      },
+    ],
+    [],
+  );
 
   function handleAdd(input: AddMemberInput) {
     addMember.mutate(input, { onSuccess: () => setShowAdd(false) });
@@ -93,13 +143,17 @@ export default function TeamPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Team ({members.length})</h2>
-        <Button size="sm" onClick={() => setShowAdd(true)}>
-          <Plus className="h-4 w-4" />
-          Add Member
-        </Button>
-      </div>
+      <PageHeader
+        title={`Team (${members.length})`}
+        back={{ href: `/${orgSlug}/projects/${projectId}`, label: 'Project' }}
+        className="mb-0"
+        actions={
+          <Button size="sm" onClick={() => setShowAdd(true)}>
+            <Plus className="h-4 w-4" />
+            Add member
+          </Button>
+        }
+      />
 
       {members.length === 0 ? (
         <EmptyState
@@ -109,59 +163,29 @@ export default function TeamPage() {
           action={
             <Button size="sm" onClick={() => setShowAdd(true)}>
               <Plus className="h-4 w-4" />
-              Add Member
+              Add member
             </Button>
           }
         />
       ) : (
-        <Card>
-          <CardContent className="pt-0">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="py-3 text-left font-medium text-muted-foreground">User ID</th>
-                  <th className="py-3 text-left font-medium text-muted-foreground">Role</th>
-                  <th className="py-3 text-left font-medium text-muted-foreground">Joined</th>
-                  <th className="py-3 text-right font-medium text-muted-foreground">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((m) => (
-                  <tr key={m.id} className="border-b border-border last:border-0 hover:bg-accent/20">
-                    <td className="py-3 font-mono text-xs text-muted-foreground">{m.user_id}</td>
-                    <td className="py-3">
-                      <span className="capitalize rounded-md bg-secondary px-2 py-0.5 text-xs font-medium">
-                        {m.role_code}
-                      </span>
-                    </td>
-                    <td className="py-3 text-muted-foreground">
-                      {format(new Date(m.joined_at), 'MMM d, yyyy')}
-                    </td>
-                    <td className="py-3 text-right">
-                      <button
-                        onClick={() => removeMember.mutate(m.user_id)}
-                        disabled={removeMember.isPending}
-                        className="rounded-md p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                        title="Remove member"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
+        <DataTable columns={columns} rows={members} rowKey={(m) => m.id} gridLines="rows" storageKey="projects-team-columns" />
       )}
 
-      {showAdd && (
-        <AddMemberModal
-          onClose={() => setShowAdd(false)}
-          onSubmit={handleAdd}
-          isPending={addMember.isPending}
-        />
-      )}
+      {showAdd && <AddMemberModal onClose={() => setShowAdd(false)} onSubmit={handleAdd} isPending={addMember.isPending} />}
+
+      <ConfirmDialog
+        open={!!removing}
+        onOpenChange={(o) => !o && setRemoving(null)}
+        title="Remove this member?"
+        description="They lose access to the project. You can add them again later."
+        confirmLabel="Remove"
+        variant="danger"
+        loading={removeMember.isPending}
+        onConfirm={() => {
+          if (!removing) return;
+          removeMember.mutate(removing.user_id, { onSettled: () => setRemoving(null) });
+        }}
+      />
     </div>
   );
 }

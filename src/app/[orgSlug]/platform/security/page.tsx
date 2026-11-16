@@ -4,6 +4,8 @@ import { useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, KeyRound, RefreshCw, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatDateTime } from '@bengo-hub/shared-ui-lib/format';
+import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +26,7 @@ import {
 const HEALTH_KEY = ['platform', 'field-keys'] as const;
 
 function when(at?: string) {
-  return at ? new Date(at).toLocaleString() : 'Never';
+  return at ? formatDateTime(at) : 'Never';
 }
 
 function Fact({ label, value, mono }: { label: string; value: ReactNode; mono?: boolean }) {
@@ -257,15 +259,15 @@ export default function SecurityKeysPage() {
 
   return (
     <div className="max-w-5xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold flex items-center gap-2">
-          <KeyRound className="h-6 w-6" /> Security keys
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Field encryption for projects-api. FIELD_ENCRYPTION_KEY is the root and lives in the cluster secret; the
-          data keys below are kept sealed under it.
-        </p>
-      </div>
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
+            <KeyRound className="h-6 w-6" /> Security keys
+          </span>
+        }
+        subtitle="Field encryption for projects-api. FIELD_ENCRYPTION_KEY is the root and lives in the cluster secret; the data keys below are kept sealed under it."
+        className="mb-0"
+      />
 
       {health.isLoading && <PageLoading />}
       {health.isError && <ErrorBanner message="Key health could not be loaded." />}

@@ -14,11 +14,24 @@ import { QADialog } from '@/components/qa/qa-dialog';
 import { QANav, QANoAccess } from '@/components/qa/qa-nav';
 import { useCreateQATemplate, useQAPermissions, useQATemplates } from '@/hooks/useQA';
 import { QA_PERMISSIONS } from '@/lib/qa/logic';
-import { formatDate } from '@/lib/utils';
+import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
+import { formatDate } from '@bengo-hub/shared-ui-lib/format';
+import { PageHeader } from '@/components/common/page-header';
 import type { CreateTemplateInput } from '@/lib/api/qa';
 import type { QATemplate, QATemplateKind } from '@/types/qa';
 
 const PAGE_SIZE = 20;
+
+const KIND_OPTIONS: ComboboxOption[] = [
+  { value: 'software', label: 'Software' },
+  { value: 'project', label: 'Project' },
+  { value: 'general', label: 'General work' },
+];
+const STATUS_OPTIONS: ComboboxOption[] = [
+  { value: 'draft', label: 'Draft' },
+  { value: 'active', label: 'Active' },
+  { value: 'archived', label: 'Archived' },
+];
 
 function CreateTemplateDialog({
   orgSlug,
@@ -61,12 +74,14 @@ function CreateTemplateDialog({
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Kind">
-            {({ id }) => (
-              <select id={id} className={inputClass} value={form.kind} onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value as QATemplateKind }))}>
-                <option value="software">Software</option>
-                <option value="project">Project</option>
-                <option value="general">General work</option>
-              </select>
+            {() => (
+              <SearchableCombobox
+                options={KIND_OPTIONS}
+                value={form.kind}
+                onChange={(v) => v && setForm((f) => ({ ...f, kind: v as QATemplateKind }))}
+                clearable={false}
+                searchPlaceholder="Find a kind"
+              />
             )}
           </Field>
           <Field label="Service tag" hint="Optional, for example hadia">
@@ -147,18 +162,19 @@ export default function QATemplatesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Acceptance templates</h1>
-          <p className="text-sm text-muted-foreground">Criteria and pass rules that sessions are created from.</p>
-        </div>
-        {perms.canManage && (
-          <Button onClick={() => setShowCreate(true)} className="w-full sm:w-auto">
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            New template
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Acceptance templates"
+        subtitle="Criteria and pass rules that sessions are created from."
+        className="mb-0"
+        actions={
+          perms.canManage ? (
+            <Button onClick={() => setShowCreate(true)}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              New template
+            </Button>
+          ) : undefined
+        }
+      />
 
       <QANav orgSlug={orgSlug} />
 
@@ -173,22 +189,17 @@ export default function QATemplatesPage() {
         gridLines="rows"
         onRowClick={(t) => router.push(`/${orgSlug}/qa/templates/${t.id}`)}
         toolbar={
-          <label className="flex items-center gap-2 text-sm">
-            <span>Status</span>
-            <select
-              className={`${inputClass} w-auto`}
-              value={status}
-              onChange={(e) => {
-                setStatus(e.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="">All</option>
-              <option value="draft">Draft</option>
-              <option value="active">Active</option>
-              <option value="archived">Archived</option>
-            </select>
-          </label>
+          <SearchableCombobox
+            options={STATUS_OPTIONS}
+            value={status}
+            onChange={(v) => {
+              setStatus(v);
+              setPage(1);
+            }}
+            placeholder="All statuses"
+            searchPlaceholder="Find a status"
+            className="w-full sm:w-44"
+          />
         }
         page={page}
         totalPages={Math.max(1, Math.ceil(total / PAGE_SIZE))}

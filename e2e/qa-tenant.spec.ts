@@ -69,7 +69,9 @@ test('people are invited with a role', async ({ page, context, baseURL }) => {
   await page.getByRole('button', { name: 'Invite people' }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Email').fill('new.signer@acme.test');
-  await dialog.getByLabel('Role').selectOption('signer');
+  // Role is the shared SearchableCombobox: open it from its current value, then pick.
+  await dialog.getByRole('button', { name: 'Tester', exact: true }).click();
+  await dialog.getByRole('button', { name: /^Signer/ }).click();
   await dialog.getByRole('button', { name: 'Send invitations' }).click();
   await expect.poll(() => s.invites).toEqual([{ email: 'new.signer@acme.test', name: '', role: 'signer' }]);
 });

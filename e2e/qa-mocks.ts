@@ -111,6 +111,22 @@ export function freshTenant(over: Partial<TenantState> = {}): TenantState {
   return { permissions: ['projects.qa.manage'], sessionStatus: 'closed', accepted: false, decisions: [], invites: [], raised: [], imported: 0, ...over };
 }
 
+const b64url = (s: string) => Buffer.from(s).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+
+/**
+ * An unsigned token for the mocked session. The UI only reads its entitlement claims, so it
+ * carries an active Projects subscription; without them a tenant reads as unsubscribed and the
+ * subscription overlay covers every page.
+ */
+function fixtureToken(): string {
+  const claims = {
+    subscription_status: 'ACTIVE',
+    subscription_features: ['project_management', 'task_tracking', 'team_collaboration', 'time_tracking', 'client_portal', 'budget_tracking', 'gantt_chart'],
+    active_service_tags: ['projects'],
+  };
+  return `${b64url('{"alg":"none"}')}.${b64url(JSON.stringify(claims))}.e2e`; // secret-scan:allow (unsigned fixture token for the mocked SSO session)
+}
+
 /** A saved sign-in in the shape the zustand auth store persists, so no SSO round trip happens. */
 export async function signIn(context: BrowserContext, baseURL: string, permissions: string[]) {
   const user = {
@@ -124,7 +140,7 @@ export async function signIn(context: BrowserContext, baseURL: string, permissio
     isPlatformOwner: false,
     isSuperUser: false,
   };
-  const state = { state: { session: { accessToken: 'e2e.token.sig', refreshToken: '', expiresAt: new Date(Date.now() + 3600_000).toISOString() }, user }, version: 0 }; // secret-scan:allow (fake fixture token for the mocked SSO session)
+  const state = { state: { session: { accessToken: fixtureToken(), refreshToken: '', expiresAt: new Date(Date.now() + 3600_000).toISOString() }, user }, version: 0 };
   await context.addInitScript(
     ([origin, value]) => {
       if (window.location.origin === origin) window.localStorage.setItem('projects-auth-storage', value);

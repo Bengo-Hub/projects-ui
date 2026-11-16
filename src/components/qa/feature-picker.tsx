@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Info } from 'lucide-react';
+import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
 import { useQAFeatures } from '@/hooks/useQA';
 import { Field, inputClass } from './fields';
-import type { QAFeature } from '@/types/qa';
 
 interface FeaturePickerProps {
   orgSlug: string;
@@ -16,31 +16,31 @@ interface FeaturePickerProps {
 }
 
 /**
- * Picks a catalogue feature (GET catalog/features). Until projects-api reads the catalogue
- * (available false) or when the read fails, the feature code is typed by hand.
+ * Picks a catalogue feature (GET catalog/features) with the shared searchable combobox, which
+ * searches label, code and group. Until projects-api reads the catalogue (available false) or
+ * when the read fails, the feature code is typed by hand.
  */
 export function FeaturePicker({ orgSlug, serviceTag, value, onChange, error }: FeaturePickerProps) {
   const { data, isLoading, isError } = useQAFeatures(orgSlug, serviceTag || undefined);
-  const [filter, setFilter] = useState('');
 
-  const groups = useMemo(() => {
-    const q = filter.trim().toLowerCase();
-    const list = (data?.data ?? []).filter(
-      (f) => !q || f.label.toLowerCase().includes(q) || f.featureCode.toLowerCase().includes(q) || (f.module ?? '').toLowerCase().includes(q),
-    );
-    const m = new Map<string, QAFeature[]>();
-    for (const f of list) {
-      const k = f.category || f.module || 'Other';
-      m.set(k, [...(m.get(k) ?? []), f]);
-    }
-    return [...m.entries()].sort(([a], [b]) => a.localeCompare(b));
-  }, [data, filter]);
+  const options = useMemo<ComboboxOption[]>(
+    () =>
+      [...(data?.data ?? [])]
+        .sort((a, b) => (a.category || a.module || 'Other').localeCompare(b.category || b.module || 'Other') || a.label.localeCompare(b.label))
+        .map((f) => ({
+          value: f.featureCode,
+          label: f.label,
+          hint: f.featureCode,
+          description: f.category || f.module || undefined,
+        })),
+    [data],
+  );
 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground" aria-busy="true">Loading the feature catalogue...</p>;
   }
 
-  const manual = isError || !data?.available || (data?.data ?? []).length === 0;
+  const manual = isError || !data?.available || options.length === 0;
   if (manual) {
     return (
       <div className="space-y-2">
@@ -73,38 +73,20 @@ export function FeaturePicker({ orgSlug, serviceTag, value, onChange, error }: F
     );
   }
 
-  const known = (data?.data ?? []).some((f) => f.featureCode === value);
+  const known = options.some((o) => o.value === value);
   return (
-    <div className="space-y-2">
-      <Field label="Search features" hint="Filter by name, code or module">
-        {({ id, describedBy }) => (
-          <input id={id} type="search" className={inputClass} value={filter} aria-describedby={describedBy} onChange={(e) => setFilter(e.target.value)} />
-        )}
-      </Field>
-      <Field label="Feature" required error={error}>
-        {({ id, describedBy, invalid }) => (
-          <select
-            id={id}
-            className={inputClass}
-            value={value}
-            aria-describedby={describedBy}
-            aria-invalid={invalid}
-            onChange={(e) => onChange(e.target.value)}
-          >
-            <option value="">{groups.length ? 'Choose a feature' : 'No feature matches the search'}</option>
-            {!known && value && <option value={value}>{value} (not in the catalogue)</option>}
-            {groups.map(([cat, feats]) => (
-              <optgroup key={cat} label={cat}>
-                {feats.map((f) => (
-                  <option key={f.featureCode} value={f.featureCode}>
-                    {f.label} ({f.featureCode})
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        )}
-      </Field>
-    </div>
+    <Field label="Feature" required error={error} hint="Search by name, code or module">
+      {() => (
+        <SearchableCombobox
+          options={options}
+          value={value}
+          valueLabel={!known && value ? `${value} (not in the catalogue)` : undefined}
+          onChange={(v) => onChange(v)}
+          placeholder="Choose a feature"
+          searchPlaceholder="Search name, code or module"
+          emptyText="No feature matches the search"
+        />
+      )}
+    </Field>
   );
 }

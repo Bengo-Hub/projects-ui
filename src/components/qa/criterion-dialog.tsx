@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { SearchableCombobox } from '@bengo-hub/shared-ui-lib/combobox';
 import { Button } from '@/components/ui/button';
 import { useProjects } from '@/hooks/useProjects';
 import { useMilestones } from '@/hooks/useMilestones';
@@ -69,36 +70,29 @@ function WorkItemPicker({
   return (
     <div className="space-y-3">
       <Field label="Project">
-        {({ id }) => (
-          <select id={id} className={inputClass} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-            <option value="">{projects.isLoading ? 'Loading projects...' : 'Choose a project'}</option>
-            {(projects.data?.data ?? []).map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+        {() => (
+          <SearchableCombobox
+            options={(projects.data?.data ?? []).map((p) => ({ value: p.id, label: p.name }))}
+            value={projectId}
+            onChange={(v) => setProjectId(v)}
+            loading={projects.isLoading}
+            placeholder={projects.isLoading ? 'Loading projects...' : 'Choose a project'}
+            searchPlaceholder="Find a project"
+          />
         )}
       </Field>
       <Field label={kind === 'milestone' ? 'Milestone' : 'Task'} required error={error}>
-        {({ id, describedBy, invalid }) => (
-          <select
-            id={id}
-            className={inputClass}
+        {() => (
+          <SearchableCombobox
+            options={items.map((i) => ({ value: i.id, label: i.label }))}
             value={value}
+            valueLabel={value && !items.some((i) => i.id === value) ? `Current ${kind} (${value.slice(0, 8)})` : undefined}
             disabled={!projectId && !value}
-            aria-describedby={describedBy}
-            aria-invalid={invalid}
-            onChange={(e) => onChange(e.target.value)}
-          >
-            <option value="">{!projectId ? 'Choose a project first' : loadingItems ? 'Loading...' : `Choose a ${kind}`}</option>
-            {value && !items.some((i) => i.id === value) && <option value={value}>Current {kind} ({value.slice(0, 8)})</option>}
-            {items.map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.label}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => onChange(v)}
+            loading={loadingItems}
+            placeholder={!projectId ? 'Choose a project first' : loadingItems ? 'Loading...' : `Choose a ${kind}`}
+            searchPlaceholder={`Find a ${kind}`}
+          />
         )}
       </Field>
     </div>
@@ -167,14 +161,14 @@ export function CriterionDialog({ open, onOpenChange, orgSlug, serviceTag, platf
             )}
           </Field>
           <Field label="Weight">
-            {({ id }) => (
-              <select id={id} className={inputClass} value={form.weight} onChange={(e) => set('weight', e.target.value as QAWeight)}>
-                {(Object.keys(WEIGHT_LABELS) as QAWeight[]).map((w) => (
-                  <option key={w} value={w}>
-                    {WEIGHT_LABELS[w]}
-                  </option>
-                ))}
-              </select>
+            {() => (
+              <SearchableCombobox
+                options={(Object.keys(WEIGHT_LABELS) as QAWeight[]).map((w) => ({ value: w, label: WEIGHT_LABELS[w] }))}
+                value={form.weight}
+                onChange={(v) => v && set('weight', v as QAWeight)}
+                clearable={false}
+                searchPlaceholder="Find a weight"
+              />
             )}
           </Field>
           <Field label="Requirement ref" hint="For example FR-12">

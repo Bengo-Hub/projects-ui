@@ -26,6 +26,13 @@ import {
 } from '@/hooks/useQA';
 import { QA_PERMISSIONS, SEVERITY_LABELS, SUBJECT_LABELS, WEIGHT_LABELS } from '@/lib/qa/logic';
 import type { QACriterion, QACriterionInput, QAPassRule, QATemplate, QATemplateStatus, QAWeight } from '@/types/qa';
+import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
+
+const TEMPLATE_STATUS_OPTIONS: ComboboxOption[] = [
+  { value: 'draft', label: 'Draft' },
+  { value: 'active', label: 'Active' },
+  { value: 'archived', label: 'Archived' },
+];
 
 const DEFAULT_RULE: Required<QAPassRule> = {
   require_all_must: true,
@@ -94,12 +101,14 @@ function TemplateSettings({ orgSlug, template, editable }: { orgSlug: string; te
                 )}
               </Field>
               <Field label="Status" hint="Archived templates cannot start sessions">
-                {({ id, describedBy }) => (
-                  <select id={id} className={inputClass} value={status} aria-describedby={describedBy} onChange={(e) => setStatus(e.target.value as QATemplateStatus)}>
-                    <option value="draft">Draft</option>
-                    <option value="active">Active</option>
-                    <option value="archived">Archived</option>
-                  </select>
+                {() => (
+                  <SearchableCombobox
+                    options={TEMPLATE_STATUS_OPTIONS}
+                    value={status}
+                    onChange={(v) => v && setStatus(v as QATemplateStatus)}
+                    clearable={false}
+                    searchPlaceholder="Find a status"
+                  />
                 )}
               </Field>
             </div>

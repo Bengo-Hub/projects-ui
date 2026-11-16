@@ -40,7 +40,9 @@ test('a tester gets in with an email code and their verdicts save on their own',
   await page.getByText('Fail', { exact: true }).click();
   await expect(page.getByText('A failure needs a severity.')).toBeVisible();
   expect(s.puts).toHaveLength(1);
-  await page.getByLabel('Severity').selectOption('2');
+  // Severity is the shared SearchableCombobox: open it, then pick the option.
+  await page.getByRole('button', { name: 'Choose a severity' }).click();
+  await page.getByRole('button', { name: '2 Major' }).click();
   await page.getByLabel(/Notes/).fill('The list is empty');
   await expect(page.getByText('Saved', { exact: true })).toBeVisible();
   expect(s.puts.at(-1)).toMatchObject({ criterionId: C2, body: { result: 'fail', severity: 2, notes: 'The list is empty' } });
