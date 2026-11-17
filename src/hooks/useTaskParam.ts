@@ -50,5 +50,17 @@ export function useTaskParam() {
     [setParams],
   );
 
-  return { taskId, projectId, open, close, setValue, get: (key: string) => params?.get(key) ?? '' };
+  /** Sets or clears several query values in one replace (two setValue calls would race). */
+  const setValues = useCallback(
+    (values: Record<string, string | null>) =>
+      setParams((p) => {
+        for (const [key, value] of Object.entries(values)) {
+          if (value) p.set(key, value);
+          else p.delete(key);
+        }
+      }, 'replace'),
+    [setParams],
+  );
+
+  return { taskId, projectId, open, close, setValue, setValues, get: (key: string) => params?.get(key) ?? '' };
 }

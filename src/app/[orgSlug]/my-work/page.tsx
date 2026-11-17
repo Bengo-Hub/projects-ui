@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/common/page-header';
 import { CountRow, ListError, ShowMore } from '@/components/common/list-parts';
 import { FeatureLocked } from '@/components/subscription/feature-locked';
 import { TaskDrawer } from '@/components/work/task-drawer';
+import { TimerButton } from '@/components/time/timer';
 import { useMyWork, useMyWorkCounts } from '@/hooks/useTasks';
 import { useTaskAccess } from '@/hooks/useTaskAccess';
 import { useTaskParam } from '@/hooks/useTaskParam';
@@ -36,6 +37,7 @@ function Row({ task, orgSlug, onOpen, overdue }: { task: Task; orgSlug: string; 
         </span>
       </button>
       <Badge status={task.priority} className="shrink-0" />
+      <TimerButton orgSlug={orgSlug} task={task} compact />
       {project && (
         <Link href={`/${orgSlug}/projects/${project.id}/tasks?task=${task.id}`} className="hidden shrink-0 text-xs text-primary hover:underline sm:inline">
           Open in project

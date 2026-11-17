@@ -5,6 +5,8 @@ import { defineConfig, devices } from '@playwright/test';
  * mocked with page.route (e2e/qa-mocks.ts), so no backend is needed.
  *
  * Locally (no BASE_URL) Playwright runs `pnpm start` on port 3005; build first with `pnpm build`.
+ * `pnpm dev` uses 3000, the port every frontend's SSO dev redirect is registered for, so the test
+ * server never reuses a dev server of this or another app.
  * With BASE_URL set no server starts.
  */
 const base = process.env.BASE_URL || 'http://localhost:3005';

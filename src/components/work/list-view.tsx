@@ -5,6 +5,8 @@ import { DataTable, type DataTableColumn } from '@bengo-hub/shared-ui-lib/data-t
 import { formatDate } from '@bengo-hub/shared-ui-lib/format';
 import { Badge } from '@/components/ui/badge';
 import { ShowMore } from '@/components/common/list-parts';
+import { TimerButton } from '@/components/time/timer';
+import { RepeatIcon } from '@/components/planning/repeat-control';
 import { AssigneeAvatars } from '@/components/work/assignees';
 import { StatusPill, statusLabel } from '@/components/work/status-pill';
 import { useTasks } from '@/hooks/useTasks';
@@ -31,7 +33,19 @@ export function ListView({
 
   const columns = useMemo<DataTableColumn<Task>[]>(
     () => [
-      { key: 'title', header: 'Title', primary: true, sortable: true, render: (t) => <span className="font-medium">{t.title}</span> },
+      {
+        key: 'title',
+        header: 'Title',
+        primary: true,
+        sortable: true,
+        accessor: (t) => t.title,
+        render: (t) => (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="font-medium">{t.title}</span>
+            <RepeatIcon metadata={t.metadata} />
+          </span>
+        ),
+      },
       {
         key: 'status',
         header: 'Status',
@@ -62,8 +76,21 @@ export function ListView({
         accessor: (t) => t.progress_pct ?? 0,
         render: (t) => <span className="tabular-nums text-muted-foreground">{t.progress_pct ?? 0}%</span>,
       },
+      {
+        key: 'timer',
+        header: <span className="sr-only">Timer</span>,
+        exportable: false,
+        mobileAction: true,
+        align: 'right',
+        // The row opens the drawer on click; the timer press must not.
+        render: (t) => (
+          <span onClick={(e) => e.stopPropagation()} className="inline-flex">
+            <TimerButton orgSlug={orgSlug} task={t} compact />
+          </span>
+        ),
+      },
     ],
-    [statuses, nameOf],
+    [statuses, nameOf, orgSlug],
   );
 
   return (

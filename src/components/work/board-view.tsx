@@ -15,6 +15,10 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { CloudOff, Plus } from 'lucide-react';
+import { toast } from 'sonner';
+import { RepeatIcon } from '@/components/planning/repeat-control';
+import { useTaskMoves } from '@/hooks/useAutomation';
+import { blockedReason } from '@/lib/planning/rules';
 import { formatDate } from '@bengo-hub/shared-ui-lib/format';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -66,6 +70,7 @@ const TaskCard = memo(function TaskCard({ task, nameOf, queued, onOpen, dragging
             {list.done}/{list.total}
           </span>
         )}
+        <RepeatIcon metadata={task.metadata} />
         {queued && (
           <span className="inline-flex items-center gap-1 text-xs text-warning" title="Waiting to sync">
             <CloudOff className="h-3 w-3" aria-hidden />
@@ -98,6 +103,7 @@ function Column({
   queuedIds,
   onOpenTask,
   onAdd,
+  blocked,
 }: {
   orgSlug: string;
   projectId: string;
@@ -109,6 +115,8 @@ function Column({
   queuedIds: Set<string>;
   onOpenTask: (id: string) => void;
   onAdd?: (status: string) => void;
+  /** While a card is dragged: why the project rules block it from this column. */
+  blocked?: string | null;
 }) {
   const col = useBoardColumn(orgSlug, projectId, status.key, filters);
   const { setNodeRef, isOver } = useDroppable({ id: status.key });
@@ -131,9 +139,22 @@ function Column({
           </button>
         )}
       </header>
+      {/* The drop target wraps the blocked note too: the note appears mid drag and pushes the list
+          down, so a drop where the list used to be must still land on this column. */}
+      <div ref={setNodeRef} className="flex flex-1 flex-col">
+      {blocked && (
+        <p className="mb-2 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-xs text-destructive" role="status" data-testid={`blocked-${status.key}`}>
+          {blocked}
+        </p>
+      )}
       <ul
-        ref={setNodeRef}
-        className={cn('min-h-32 flex-1 space-y-2 rounded-md bg-muted/40 p-2 transition-colors', isOver && 'bg-primary/10 ring-1 ring-primary/30')}
+        title={blocked ?? undefined}
+        className={cn(
+          'min-h-32 flex-1 space-y-2 rounded-md bg-muted/40 p-2 transition-colors',
+          isOver && !blocked && 'bg-primary/10 ring-1 ring-primary/30',
+          blocked && 'opacity-60',
+          isOver && blocked && 'ring-1 ring-destructive/50',
+        )}
       >
         {col.isLoading && [0, 1, 2].map((i) => <li key={i} className="h-20 animate-pulse rounded-md bg-muted" />)}
         {col.tasks.map((t) => (
@@ -141,6 +162,7 @@ function Column({
         ))}
         {!col.isLoading && shown === 0 && <li className="px-1 py-6 text-center text-xs text-muted-foreground">No tasks</li>}
       </ul>
+      </div>
       {col.hasNextPage && (
         <Button variant="ghost" className="mt-1 h-11 sm:h-9" disabled={col.isFetchingNextPage} onClick={() => void col.fetchNextPage()}>
           {col.isFetchingNextPage ? 'Loading more' : `Show more (${Math.max(0, total - shown)})`}
@@ -178,6 +200,9 @@ export function BoardView({
   const change = useChangeStatus(orgSlug, projectId);
   const queue = useOfflineQueue();
   const [active, setActive] = useState<Task | null>(null);
+  // Status rules (sprint 16): once a drag starts, ask which columns the card may go to.
+  const moves = useTaskMoves(orgSlug, projectId, active?.id ?? '');
+  const blockedFor = (key: string) => (active && key !== active.status ? blockedReason(moves.data, key) : null);
   const sensors = useSensors(
     // Mouse and touch apart (not PointerSensor): on a phone a touch also fires pointer events, the
     // scrolling board then hands the gesture to the browser (pointercancel) and the drag dies
@@ -198,12 +223,18 @@ export function BoardView({
 
   const onDragStart = (e: DragStartEvent) => setActive((e.active.data.current?.task as Task) ?? null);
   const onDragEnd = (e: DragEndEvent) => {
+    const why = e.over ? blockedFor(e.over.id as string) : null;
     setActive(null);
     const task = e.active.data.current?.task as Task | undefined;
     const to = e.over?.id as string | undefined;
     if (!task || !to) return;
     const current = pendingStatus(queue, task.id) ?? task.status;
     if (to === current) return;
+    // A move the rules block stays put and says why; the API would refuse it with the same words.
+    if (why) {
+      toast.error(why, { id: 'status-rule-blocked' });
+      return;
+    }
     change.mutate({ task: { ...task, status: current }, to });
   };
 
@@ -236,6 +267,7 @@ export function BoardView({
             queuedIds={queuedIds}
             onOpenTask={onOpenTask}
             onAdd={access.canAdd ? onAdd : undefined}
+            blocked={blockedFor(s.key)}
           />
         ))}
       </div>

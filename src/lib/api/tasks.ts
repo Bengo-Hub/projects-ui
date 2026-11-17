@@ -109,9 +109,13 @@ export const tasksApi = {
     apiClient
       .get<{ data: TaskTrendMonth[] }>(`/api/v1/${orgSlug}/tasks/trend`, params)
       .then((r) => r.data ?? []),
-  /** Up to 2000 tasks with dependencies and the critical flag; truncated says the project has more. */
-  gantt: (orgSlug: string, projectId: string) =>
-    apiClient.get<GanttResponse>(`/api/v1/${orgSlug}/projects/${projectId}/gantt`),
+  /**
+   * Up to 2000 tasks with dependencies and the critical flag; truncated says the project has more.
+   * baseline (sprint 16) is the named baseline, else the latest, null without one or without
+   * projects.baselines.view.
+   */
+  gantt: (orgSlug: string, projectId: string, baselineId?: string) =>
+    apiClient.get<GanttResponse>(`/api/v1/${orgSlug}/projects/${projectId}/gantt`, baselineId ? { baseline_id: baselineId } : undefined),
 
   statuses: (orgSlug: string, projectId: string) =>
     apiClient

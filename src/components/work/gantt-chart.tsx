@@ -7,6 +7,7 @@ import type { TaskAccess } from '@/hooks/useTaskAccess';
 import {
   PX_PER_DAY,
   ROW_HEIGHT,
+  baselineBars,
   conflictMessage,
   dependencyArrows,
   draggedDates,
@@ -20,6 +21,7 @@ import {
 } from '@/lib/work/gantt';
 import { formatDate } from '@bengo-hub/shared-ui-lib/format';
 import type { GanttTask, ProjectStatus } from '@/types';
+import type { GanttBaseline } from '@/lib/api/planning';
 import { cn } from '@/lib/utils';
 
 const LABEL_W = 220;
@@ -49,6 +51,7 @@ export function GanttChart({
   zoom,
   access,
   onOpenTask,
+  baseline,
 }: {
   orgSlug: string;
   projectId: string;
@@ -57,11 +60,14 @@ export function GanttChart({
   zoom: GanttZoom;
   access: TaskAccess;
   onOpenTask: (id: string) => void;
+  /** Sprint 16: a saved baseline, drawn as a thin bar under each live bar. */
+  baseline?: GanttBaseline | null;
 }) {
   const rows = useMemo(() => orderRows(tasks), [tasks]);
   const bars = useMemo(() => layoutBars(rows), [rows]);
+  const planned = useMemo(() => baselineBars(rows, baseline?.tasks), [rows, baseline]);
   const today = todayDay();
-  const { from, to } = useMemo(() => visibleRange(bars, today), [bars, today]);
+  const { from, to } = useMemo(() => visibleRange([...bars, ...planned], today), [bars, planned, today]);
   const px = PX_PER_DAY[zoom];
   const chartW = (to - from + 1) * px;
   const bodyH = rows.length * ROW_HEIGHT;
@@ -185,6 +191,20 @@ export function GanttChart({
                     markerEnd={`url(#${a.critical ? 'gantt-arrow-critical' : 'gantt-arrow'})`}
                   />
                 ))}
+              {planned
+                .filter((b) => b.row >= first && b.row <= last)
+                .map((b) => (
+                  <rect
+                    key={`baseline-${b.id}`}
+                    x={(b.start - from) * px}
+                    y={b.row * ROW_HEIGHT + ROW_HEIGHT - 7}
+                    width={Math.max(px, (b.end - b.start + 1) * px)}
+                    height={4}
+                    rx={2}
+                    className="pointer-events-none fill-muted-foreground/50"
+                    data-testid={`baseline-bar-${b.id}`}
+                  />
+                ))}
               {bars
                 .filter((b) => b.row >= first && b.row <= last)
                 .map((b) => {
@@ -244,6 +264,11 @@ export function GanttChart({
         <span className="inline-flex items-center gap-1.5">
           <span className="h-3 w-0 border-l-2 border-dashed border-warning" aria-hidden /> Today
         </span>
+        {baseline && (
+          <span className="inline-flex items-center gap-1.5" data-testid="baseline-legend">
+            <span className="h-1 w-4 rounded-sm bg-muted-foreground/50" aria-hidden /> Baseline: {baseline.name}
+          </span>
+        )}
         {rows.some((t) => access.canEdit(t)) && <span>Drag a bar to move it, or its ends to change the dates.</span>}
       </p>
     </div>
@@ -251,7 +276,17 @@ export function GanttChart({
 }
 
 /** Below 640 px: the plan as a list (dates, status, critical), each opening the drawer. */
-export function GanttList({ tasks, statuses, onOpenTask }: { tasks: GanttTask[]; statuses: ProjectStatus[]; onOpenTask: (id: string) => void }) {
+export function GanttList({
+  tasks,
+  statuses,
+  onOpenTask,
+  baseline,
+}: {
+  tasks: GanttTask[];
+  statuses: ProjectStatus[];
+  onOpenTask: (id: string) => void;
+  baseline?: GanttBaseline | null;
+}) {
   const rows = useMemo(() => orderRows(tasks), [tasks]);
   return (
     <ul className="divide-y divide-border rounded-md border border-border" data-testid="gantt-list">
@@ -266,6 +301,11 @@ export function GanttList({ tasks, statuses, onOpenTask }: { tasks: GanttTask[];
               {formatDate(t.start_date, null, { fallback: 'No start' })} to {formatDate(t.due_date, null, { fallback: 'no due date' })}
               {t.critical && <span className="ml-2 font-medium text-destructive">Critical</span>}
             </span>
+            {baseline?.tasks?.[t.id] && (
+              <span className="text-xs text-muted-foreground" data-testid="baseline-dates">
+                Baseline {formatDate(baseline.tasks[t.id].start_date, null, { fallback: 'no start' })} to {formatDate(baseline.tasks[t.id].due_date, null, { fallback: 'no due date' })}
+              </span>
+            )}
           </button>
         </li>
       ))}

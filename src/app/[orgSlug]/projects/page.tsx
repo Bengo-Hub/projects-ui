@@ -3,7 +3,8 @@
 import { useParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Plus, FolderKanban, Users, Calendar } from 'lucide-react';
+import { Plus, FolderKanban, Users, Calendar, LayoutTemplate } from 'lucide-react';
+import { TemplateGallery } from '@/components/planning/template-gallery';
 import { SearchableCombobox } from '@bengo-hub/shared-ui-lib/combobox';
 import { useDebouncedSearch } from '@bengo-hub/shared-ui-lib/search';
 import { formatDate } from '@bengo-hub/shared-ui-lib/format';
@@ -123,6 +124,9 @@ export default function ProjectsPage() {
   const createProject = useCreateProject(orgSlug);
   const { can } = useServicePermissions();
   const canAdd = can(PERMS.projectsAdd);
+  // Starting from a template needs projects.add and templates.view (sprint 16).
+  const canUseTemplates = canAdd && can(PERMS.templatesView);
+  const [showTemplates, setShowTemplates] = useState(false);
 
   const projects = useMemo(() => {
     const all = data?.data ?? [];
@@ -148,10 +152,18 @@ export default function ProjectsPage() {
         className="mb-0"
         actions={
           canAdd ? (
-            <Button onClick={() => setShowCreate(true)} size="sm">
-              <Plus className="h-4 w-4" />
-              New project
-            </Button>
+            <>
+              {canUseTemplates && (
+                <Button variant="outline" onClick={() => setShowTemplates(true)} className="h-11 sm:h-8 sm:px-3 sm:text-xs">
+                  <LayoutTemplate className="h-4 w-4" />
+                  New from template
+                </Button>
+              )}
+              <Button onClick={() => setShowCreate(true)} size="sm" className="h-11 sm:h-8">
+                <Plus className="h-4 w-4" />
+                New project
+              </Button>
+            </>
           ) : undefined
         }
       />
@@ -228,6 +240,8 @@ export default function ProjectsPage() {
           ))}
         </div>
       )}
+
+      {showTemplates && <TemplateGallery orgSlug={orgSlug} canDelete={can(PERMS.templatesDelete)} onClose={() => setShowTemplates(false)} />}
 
       {showCreate && (
         <CreateProjectModal

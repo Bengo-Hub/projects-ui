@@ -18,6 +18,16 @@ import type { BoardCount, MyWorkBucket, PaginatedResponse, ProjectStatus, Task, 
 const KEY = 'tasks';
 const GANTT_KEY = 'gantt';
 const MY_WORK_KEY = 'my-work';
+/** useTaskMoves' key prefix (hooks/useAutomation.ts). */
+const MOVES_KEY = 'automation';
+
+/** The message of a 422 status_rule_blocked (sprint 16 status rules), or null for any other error. */
+export function statusRuleBlocked(err: unknown): string | null {
+  if (httpStatusOf(err) !== 422) return null;
+  const body = errorBody(err);
+  if (body?.code !== 'status_rule_blocked') return null;
+  return body.error || 'The project rules do not allow this move.';
+}
 /** Tasks per page of the list. */
 export const TASK_PAGE_LIMIT = 100;
 /** Tasks per page of one board column: the board never loads more than this per column at once. */
@@ -138,11 +148,14 @@ export function useSubtasks(orgSlug: string, projectId: string, parentId: string
   return { ...query, tasks: pages.flatMap((p) => p.data ?? []), total: pages[0]?.total ?? 0 };
 }
 
-/** The project's plan: up to 2000 tasks with dependencies and the critical path. */
-export function useGanttData(orgSlug: string, projectId: string, enabled = true) {
+/**
+ * The project's plan: up to 2000 tasks with dependencies and the critical path, plus a baseline
+ * (the named one, else the latest) when the user may see baselines.
+ */
+export function useGanttData(orgSlug: string, projectId: string, enabled = true, baselineId = '') {
   return useQuery({
-    queryKey: [GANTT_KEY, orgSlug, projectId],
-    queryFn: () => tasksApi.gantt(orgSlug, projectId),
+    queryKey: [GANTT_KEY, orgSlug, projectId, baselineId],
+    queryFn: () => tasksApi.gantt(orgSlug, projectId, baselineId || undefined),
     enabled: enabled && !!orgSlug && !!projectId,
   });
 }
@@ -189,6 +202,8 @@ export function useUpdateTask(orgSlug: string, projectId: string) {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
       void qc.invalidateQueries({ queryKey: [GANTT_KEY, orgSlug, projectId] });
       void qc.invalidateQueries({ queryKey: [MY_WORK_KEY, orgSlug] });
+      // A filled field can open a move the status rules blocked.
+      void qc.invalidateQueries({ queryKey: [MOVES_KEY, orgSlug, projectId, 'moves'] });
       toast.success('Task updated');
     },
     onError: onMutationError('Failed to update task'),
@@ -257,7 +272,13 @@ export function useChangeStatus(orgSlug: string, projectId: string) {
       return { snapshot };
     },
     onError: (err, _vars, ctx) => {
+      // The card snaps back to where it was.
       ctx?.snapshot.forEach(([key, data]) => qc.setQueryData(key, data));
+      const blocked = statusRuleBlocked(err);
+      if (blocked) {
+        toast.error(blocked, { id: 'status-rule-blocked' });
+        return;
+      }
       onMutationError('The task could not be moved')(err);
     },
     onSuccess: (res) => {
@@ -268,6 +289,7 @@ export function useChangeStatus(orgSlug: string, projectId: string) {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, projectId] });
       void qc.invalidateQueries({ queryKey: [GANTT_KEY, orgSlug, projectId] });
       void qc.invalidateQueries({ queryKey: [MY_WORK_KEY, orgSlug] });
+      void qc.invalidateQueries({ queryKey: [MOVES_KEY, orgSlug, projectId, 'moves'] });
     },
   });
 }

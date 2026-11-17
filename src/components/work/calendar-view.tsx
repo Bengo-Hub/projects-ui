@@ -5,6 +5,7 @@ import { DndContext, MouseSensor, TouchSensor, KeyboardSensor, useDraggable, use
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusPill } from '@/components/work/status-pill';
+import { TimerButton } from '@/components/time/timer';
 import { useCalendarTasks, useReschedule } from '@/hooks/useTasks';
 import { useTaskTitles } from '@/hooks/useTaskTitles';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -149,11 +150,12 @@ export function CalendarView({
                 <h4 className={cn('mb-1 text-xs font-semibold uppercase tracking-wide', d === today ? 'text-primary' : d < today ? 'text-destructive' : 'text-muted-foreground')}>{dayTitle(d)}</h4>
                 <ul className="divide-y divide-border rounded-md border border-border">
                   {(byDay.get(d) ?? []).map((t) => (
-                    <li key={t.id}>
-                      <button type="button" onClick={() => onOpenTask(t.id)} className="flex min-h-12 w-full items-center gap-2 px-3 text-left">
+                    <li key={t.id} className="flex items-center gap-1 pr-2">
+                      <button type="button" onClick={() => onOpenTask(t.id)} className="flex min-h-12 min-w-0 flex-1 items-center gap-2 px-3 text-left">
                         <span className="min-w-0 flex-1 truncate text-sm">{t.title}</span>
                         <StatusPill status={t.status} statuses={statuses} />
                       </button>
+                      <TimerButton orgSlug={orgSlug} task={t} compact />
                     </li>
                   ))}
                 </ul>

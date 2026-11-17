@@ -1,4 +1,5 @@
 import type { MilestoneDecision } from './portal';
+import type { GanttBaseline } from '@/lib/api/planning';
 
 export interface Project {
   id: string;
@@ -290,6 +291,8 @@ export interface GanttResponse {
   limit: number;
   /** Length of the critical path in days. */
   critical_days: number;
+  /** Sprint 16: the baseline drawn under the live bars; null without one or without baselines.view. */
+  baseline?: GanttBaseline | null;
 }
 
 export interface ProjectSummary {

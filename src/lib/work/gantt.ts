@@ -77,6 +77,24 @@ export function layoutBars(rows: GanttInputTask[]): Bar[] {
   return out;
 }
 
+/**
+ * Baseline bars (sprint 16): each row's task as the baseline planned it, on the same row as its
+ * live bar. Tasks the baseline did not hold, or held without dates, have none.
+ */
+export function baselineBars(
+  rows: GanttInputTask[],
+  planned: Record<string, { id: string; title: string; status: string; start_date?: string; due_date?: string }> | undefined | null,
+): Bar[] {
+  if (!planned) return [];
+  const out: Bar[] = [];
+  rows.forEach((t, row) => {
+    const p = planned[t.id];
+    const span = p ? barSpan(p) : null;
+    if (span) out.push({ id: t.id, row, ...span, critical: false });
+  });
+  return out;
+}
+
 /** The days shown: a margin around every bar and today, at least four weeks. */
 export function visibleRange(bars: Bar[], today: number, marginDays = 7): { from: number; to: number } {
   let from = today;

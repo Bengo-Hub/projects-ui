@@ -23,11 +23,15 @@ import {
   useCreateTask,
   useDeleteTask,
   useProjectStatuses,
+  statusRuleBlocked,
   useReschedule,
   useSubtasks,
   useTask,
   useUpdateTask,
 } from '@/hooks/useTasks';
+import { useTaskMoves } from '@/hooks/useAutomation';
+import { RepeatControl } from '@/components/planning/repeat-control';
+import { blockedReason } from '@/lib/planning/rules';
 import { useTaskActivities } from '@/hooks/useActivities';
 import { useProjectPeople } from '@/hooks/usePeople';
 import { useTaskAccess } from '@/hooks/useTaskAccess';
@@ -163,7 +167,23 @@ function TaskBody({
     setSeen({ title: task.title, description: task.description ?? '', estimate: serverEstimate, editing: editingDescription });
   }
 
-  const statusOptions: ComboboxOption[] = (statuses ?? []).map((s) => ({ value: s.key, label: s.label }));
+  // Status rules (sprint 16): a blocked move says why in the menu and is not sent.
+  const moves = useTaskMoves(orgSlug, projectId, editable ? task.id : '');
+  const [blockedNote, setBlockedNote] = useState<string | null>(null);
+  const statusOptions: ComboboxOption[] = (statuses ?? []).map((s) => {
+    const why = s.key === task.status ? null : blockedReason(moves.data, s.key);
+    return { value: s.key, label: s.label, ...(why ? { hint: 'Blocked', description: why } : {}) };
+  });
+  const moveTo = (v: string) => {
+    if (!v || v === task.status) return;
+    const why = blockedReason(moves.data, v);
+    if (why) {
+      setBlockedNote(why);
+      return;
+    }
+    setBlockedNote(null);
+    changeStatus.mutate({ task, to: v }, { onError: (err) => setBlockedNote(statusRuleBlocked(err)) });
+  };
   const assigneeIds = (task.edges?.assignees ?? []).map((a) => a.user_id);
   const save = (data: Parameters<typeof update.mutate>[0]['data']) => update.mutate({ id: task.id, data });
   const setDate = (field: 'start_date' | 'due_date', value: string) => {
@@ -192,12 +212,17 @@ function TaskBody({
               options={statusOptions}
               value={task.status}
               valueLabel={statusLabel(statuses, task.status)}
-              onChange={(v) => v && v !== task.status && changeStatus.mutate({ task, to: v })}
+              onChange={moveTo}
               clearable={false}
               searchPlaceholder="Move to"
             />
           ) : (
             <StatusPill status={task.status} statuses={statuses} />
+          )}
+          {blockedNote && (
+            <p role="alert" className="mt-1 text-xs text-destructive" data-testid="status-blocked">
+              {blockedNote}
+            </p>
           )}
         </Field>
         <Field label="Priority">
@@ -283,6 +308,8 @@ function TaskBody({
           </div>
         </Field>
       </div>
+
+      <RepeatControl orgSlug={orgSlug} projectId={projectId} task={task} editable={editable} />
 
       <ClientSharing orgSlug={orgSlug} projectId={projectId} task={task} />
 

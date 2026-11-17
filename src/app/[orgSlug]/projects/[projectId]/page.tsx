@@ -1,8 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Calendar, Lock } from 'lucide-react';
+import { Calendar, LayoutTemplate, Lock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { SaveTemplateDialog } from '@/components/planning/save-template-dialog';
 import { useFeature } from '@bengo-hub/shared-ui-lib/subscription';
 import { formatCurrency, formatDate } from '@bengo-hub/shared-ui-lib/format';
 import { useProject, useProjectSummary } from '@/hooks/useProjects';
@@ -35,6 +38,8 @@ export default function ProjectDetailPage() {
   const hasBudgetTracking = useFeature('budget_tracking');
   const hasCollaboration = useFeature('team_collaboration');
   const hasClientPortal = useFeature('client_portal');
+  const hasAutomation = useFeature('project_automation');
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   if (isLoading) return <PageLoading />;
   if (isNotFound(error)) return <ProjectNotFound orgSlug={orgSlug} />;
@@ -86,6 +91,16 @@ export default function ProjectDetailPage() {
       locked: !hasClientPortal,
       perm: PERMS.commentsView,
     },
+    // Planning depth (sprint 16). Risks and changes are on every plan; automation needs
+    // project_automation, so a missing feature locks the tab.
+    { href: `/${orgSlug}/projects/${projectId}/risks`, label: 'Risks', perm: PERMS.risksView },
+    { href: `/${orgSlug}/projects/${projectId}/changes`, label: 'Changes', perm: [PERMS.changeRequestsView, PERMS.changeApprovals] },
+    {
+      href: `/${orgSlug}/projects/${projectId}/automation`,
+      label: 'Automation',
+      locked: !hasAutomation,
+      perm: [PERMS.automationView, PERMS.automationManage],
+    },
   ].filter((t) => can(t.perm));
 
   const tasksDone = summary?.completed_tasks ?? 0;
@@ -97,9 +112,20 @@ export default function ProjectDetailPage() {
       <PageHeader
         title={project.name}
         back={{ href: `/${orgSlug}/projects`, label: 'All projects' }}
-        actions={<Badge status={project.status} />}
+        actions={
+          <>
+            <Badge status={project.status} />
+            {can(PERMS.templatesAdd) && (
+              <Button variant="outline" className="h-11 sm:h-8 sm:px-3 sm:text-xs" onClick={() => setSavingTemplate(true)}>
+                <LayoutTemplate className="h-4 w-4" aria-hidden />
+                Save as template
+              </Button>
+            )}
+          </>
+        }
         className="mb-0"
       />
+      {savingTemplate && <SaveTemplateDialog orgSlug={orgSlug} projectId={projectId} projectName={project.name} onClose={() => setSavingTemplate(false)} />}
       {project.description && <RichTextView value={project.description} className="text-muted-foreground" />}
 
       {/* Sub-navigation */}

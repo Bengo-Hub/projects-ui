@@ -1,4 +1,4 @@
-import { ClipboardCheck, Clock, FileText, FolderKanban, KeyRound, LayoutDashboard, ListTodo, PieChart, ShieldCheck, type LucideIcon } from 'lucide-react';
+import { ClipboardCheck, Clock, FileText, FolderKanban, KeyRound, LayoutDashboard, ListTodo, PieChart, ShieldCheck, Stamp, Users, type LucideIcon } from 'lucide-react';
 import { PERMS } from '@/lib/auth/permissions';
 
 export interface NavItem {
@@ -9,7 +9,7 @@ export interface NavItem {
   /** Short label for the phone bottom bar. */
   shortLabel?: string;
   /** Subscription feature code: shows an upgrade lock when the tenant's plan lacks it. */
-  subFeature?: 'project_management' | 'budget_tracking' | 'task_tracking';
+  subFeature?: 'project_management' | 'budget_tracking' | 'task_tracking' | 'workload_planning';
   /** Plan features that must all be on, else the item is hidden rather than locked. */
   requiresFeatures?: readonly HiddenFeature[];
   /** Hidden unless the user holds one of these projects permissions (service auth/me). */
@@ -37,6 +37,9 @@ export const NAV: NavGroup[] = [
     items: [
       { label: 'Dashboard', shortLabel: 'Home', path: '/dashboard', icon: LayoutDashboard, bottomNav: true },
       { label: 'My work', path: '/my-work', icon: ListTodo, subFeature: 'task_tracking', permission: [PERMS.tasksView, PERMS.tasksViewOwn], bottomNav: true },
+      // Sprint 16. Off the phone bar (four tabs and More fit 390 px); both sit in More.
+      { label: 'Workload', path: '/workload', icon: Users, subFeature: 'workload_planning', permission: [PERMS.workloadView] },
+      { label: 'Approvals', path: '/approvals', icon: Stamp, subFeature: 'project_management', permission: [PERMS.changeApprovals] },
       { label: 'Projects', path: '/projects', icon: FolderKanban, subFeature: 'project_management', permission: [PERMS.projectsView], bottomNav: true },
       // Before Portfolio: the phone bar holds four tabs, so with Time on it Portfolio moves to More.
       { label: 'Time', path: '/time', icon: Clock, requiresFeatures: ['time_tracking', 'attendance'], permission: [PERMS.timeViewOwn], bottomNav: true },

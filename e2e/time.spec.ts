@@ -100,3 +100,12 @@ test('the billable switch shows on time and materials rows only and re-sends the
   await expect.poll(() => t.puts.length).toBe(1);
   expect(t.puts[0]).toMatchObject({ project_id: PROJECT_ID, task_id: T1, date: days()[0], hours: 2, billable: false });
 });
+
+test('the timer starts from a My Work row without opening the task', async ({ page, context, baseURL }) => {
+  const t = await setup(page, context, baseURL!);
+  await page.goto(`/${ORG}/my-work`);
+  await page.getByTestId('bucket-overdue').getByRole('button', { name: /^Start a timer on Pour foundation slab/ }).click();
+  await expect(page.getByTestId('timer-pill')).toBeVisible();
+  expect(t.starts).toEqual([T1]);
+  await expect(page).not.toHaveURL(/task=/);
+});

@@ -56,6 +56,26 @@ export const PERMS = {
   qaManage: 'projects.qa.manage',
 
   rbacManage: 'projects.rbac.manage',
+
+  // Planning depth (sprint 16).
+  workloadView: 'projects.workload.view',
+  workloadManage: 'projects.workload.manage',
+  baselinesView: 'projects.baselines.view',
+  baselinesAdd: 'projects.baselines.add',
+  baselinesDelete: 'projects.baselines.delete',
+  risksView: 'projects.risks.view',
+  risksAdd: 'projects.risks.add',
+  risksChange: 'projects.risks.change',
+  risksDelete: 'projects.risks.delete',
+  changeRequestsView: 'projects.change_requests.view',
+  changeRequestsAdd: 'projects.change_requests.add',
+  changeRequestsManage: 'projects.change_requests.manage',
+  changeApprovals: 'projects.change_approvals.manage',
+  templatesView: 'projects.templates.view',
+  templatesAdd: 'projects.templates.add',
+  templatesDelete: 'projects.templates.delete',
+  automationView: 'projects.automation.view',
+  automationManage: 'projects.automation.manage',
 } as const;
 
 export type PermissionCode = (typeof PERMS)[keyof typeof PERMS];
@@ -104,6 +124,24 @@ export const PERMISSION_NAMES: Record<PermissionCode, string> = {
   'projects.qa.run': 'Record QA results',
   'projects.qa.manage': 'Manage QA templates, sessions and decisions',
   'projects.rbac.manage': 'Manage roles and role assignments',
+  'projects.workload.view': 'View team workload',
+  'projects.workload.manage': 'Set team capacity',
+  'projects.baselines.view': 'View baselines and slips',
+  'projects.baselines.add': 'Save baselines',
+  'projects.baselines.delete': 'Delete baselines',
+  'projects.risks.view': 'View the risk register',
+  'projects.risks.add': 'Raise risks',
+  'projects.risks.change': 'Edit risks',
+  'projects.risks.delete': 'Delete risks',
+  'projects.change_requests.view': 'View change requests',
+  'projects.change_requests.add': 'Raise change requests',
+  'projects.change_requests.manage': 'Manage every change request',
+  'projects.change_approvals.manage': 'Approve and reject change requests',
+  'projects.templates.view': 'View project templates',
+  'projects.templates.add': 'Save projects as templates',
+  'projects.templates.delete': 'Delete project templates',
+  'projects.automation.view': 'View automation rules',
+  'projects.automation.manage': 'Manage status rules and automations',
 };
 
 export const ALL_PERMISSIONS = Object.values(PERMS) as PermissionCode[];
@@ -175,14 +213,20 @@ const PROJECT_MANAGER: string[] = [
   PERMS.tendersView, PERMS.tendersAdd, PERMS.tendersChange, PERMS.financialsView,
   PERMS.timeView, PERMS.timeAdd, PERMS.timeManage, PERMS.portalManage, PERMS.qaManage,
   PERMS.billingManage,
+  PERMS.workloadView, PERMS.baselinesView, PERMS.baselinesAdd, PERMS.baselinesDelete,
+  PERMS.risksView, PERMS.risksAdd, PERMS.risksChange, PERMS.risksDelete,
+  PERMS.changeRequestsManage, PERMS.changeApprovals, PERMS.templatesView, PERMS.templatesAdd, PERMS.automationManage,
 ];
 const MEMBER: string[] = [
   PERMS.projectsView, PERMS.tasksView, PERMS.tasksAdd, PERMS.tasksChangeOwn,
   PERMS.milestonesView, PERMS.membersView, PERMS.commentsView, PERMS.commentsAdd, PERMS.commentsChangeOwn, PERMS.commentsDeleteOwn,
   PERMS.tendersView, PERMS.timeViewOwn, PERMS.timeAdd, PERMS.qaRun,
+  PERMS.baselinesView, PERMS.risksView, PERMS.risksAdd, PERMS.changeRequestsView, PERMS.changeRequestsAdd,
+  PERMS.templatesView, PERMS.automationView,
 ];
 const VIEWER: string[] = [
   PERMS.projectsView, PERMS.tasksView, PERMS.milestonesView, PERMS.membersView, PERMS.commentsView, PERMS.tendersView, PERMS.qaView,
+  PERMS.baselinesView, PERMS.risksView, PERMS.changeRequestsView,
 ];
 
 export const ROLE_PERMISSIONS: Record<string, string[]> = {

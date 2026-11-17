@@ -55,17 +55,29 @@ Sprint 12 screens built 2026-11-16 (see plan.md, "Sprint 12"): task drawer, seve
 - Time tracking: built 2026-11-17 (plan.md, "Sprint 13"). Still open:
   - Done 2026-11-17: the person picker searches the tenant through `GET /time/people` on the server, and the stop sends an `Idempotency-Key` built from the run (task and start time), so two devices stopping the same run log it once.
   - The add row picker loads 100 projects and their tasks 100 at a time, with no server search on tasks.
-  - A timer on the list, calendar and My Work rows (the board card and the drawer have it today).
+  - Done 2026-11-17: the timer is on the list rows, the calendar's agenda rows and the My Work rows too (the month and week grid chips stay drag targets only).
 - Client portal: built 2026-11-17 (plan.md, "Sprint 14"). Still open:
   - Done 2026-11-17 with projects-api: the `X-Client-Invites` CORS header, the contact lookup for `portal.manage`, `last_decision` on the team's milestones, `author_kind` on thread entries and `progress` on the portal list (plan.md, "API follow-ups wired in").
   - Fixed 2026-11-17: a revoked client's older thread entries kept carrying the Team tag. projects-api now stores the author kind on each comment when it is posted, so the Client tag stays.
   - Done 2026-11-17 (sprint 15): the portal's Invoices tab lists the sent and paid invoices with a "View and pay" link to treasury's public page.
   - Ready for review lives on the milestones page, which needs `milestone_billing`; a firm without it cannot send milestones for review from the UI yet.
-- Billing and profitability screens: built 2026-11-17 (plan.md, "Sprint 15"). Waiting on the main session's type check, lint, node tests, build and Playwright run. Still open:
+- Billing and profitability screens: released 2026-11-17 (plan.md, "Sprint 15"; projects-ui `3ed4ba7`, Playwright 115 passed). Still open:
+  - VAT is per project (`tax_code` on the contract card) and empty by default, which invoices with no VAT. I could default it from a tenant setting once treasury exposes the tenant's VAT registration over S2S.
   - The Billing tab shows the latest invoices only, with a link to the full list in treasury; there is no paging on the tab.
   - Retainer hours used against the allowance (and what rolls over) are not shown yet. projects-api does not send them.
   - The client rollup on the portfolio is not paged and cannot open a client's projects; a client filter on the By project view would do it.
   - The hourly rate is now set on the contract card, but there is no rate per person or per role.
   - Voiding or sending an invoice is done in treasury; the tab links there and refreshes on its next load.
-- Workload, baselines, risks, change requests, templates, status rules. Sprint 16.
+- Workload, baselines, risks, change requests, templates, recurring tasks, status rules and automations: screens built 2026-11-17 (plan.md, "Sprint 16"), not yet through the type check, lint, build and Playwright batch. Still open:
+  - The approvals queue and the Changes tab show the latest 100 requests with no paging, and the queue names projects from the first 100 projects the approver can see.
+  - The risk register loads 500 risks in one page (the API holds up to 1000); the heat map filter runs over that page.
+  - A change request's date shifts name their tasks only when those tasks are cached; from the approvals page they can read "Task" and a short id. A `task_title` on each shift from projects-api would fix it.
+  - The task picker for date shifts lists the project's tasks 100 at a time with Load more and no server search.
+  - The cost change uses the project's own budget when financials report one (needs `budget_tracking` and `financials.view`); there is no picker over other draft budgets in treasury, since projects-api has no budget list route.
+  - Automations set priority to low, medium, high or urgent (the API's list), while tasks use low, medium, high or critical; one of the two lists should change.
+  - A queued offline status move that the rules refuse on replay is not explained to the user yet.
+  - Editing a pending change request (PUT) has no screen; withdraw and raise a new one instead.
+  - Required fields can only be set per target status from any status; a rule limited to one source status shows only through the API.
+  - The workload capacity has no ERP read yet (projects-api decision), and public holidays are not counted.
+- Fixed 2026-11-17: `pnpm dev` served on 3005 while every frontend's SSO dev redirect (auth-api seed) is `http://localhost:3000`, so a local sign-in could not return. Dev now runs on 3000; `pnpm start` (Playwright's server) stays on 3005.
 - Project status reports. Source: plan.md Sprint 3. API sprint 7.

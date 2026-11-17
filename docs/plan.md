@@ -291,12 +291,14 @@ dependencies.
     dropped before, so the unverified email and 409 specs really run those cases. The staff
     fixture token gains `milestone_billing` so the milestones page renders.
 
-### Sprint 15: Billing and profitability (UI built 2026-11-17)
+### Sprint 15: Billing and profitability (released 2026-11-17, projects-ui `3ed4ba7`)
 
 I built the screens against the projects-api billing routes (`internal/http/handlers/billing.go`)
 and the client rollup (`GET /financials/clients`). Treasury owns every invoice; these screens create
-drafts through projects-api and link to treasury-ui's invoice page (`/{orgSlug}/invoices/{id}`).
-Waiting on the main session: type check, lint, `pnpm test`, build and Playwright.
+invoices through projects-api and link to treasury-ui's invoice page (`/{orgSlug}/invoices/{id}`).
+Treasury approves an invoice a service creates, so a new one reads "Ready to send": the firm sends
+it from treasury, which is when it reaches the client and eTIMS. Verified: type check, lint, 65
+node tests, build and Playwright (115 passed at phone and desktop); deployed and smoke tested.
 
 - [x] **Permissions.** `projects.billing.view` ("View project billing and invoices") and
   `projects.billing.manage` ("Create project invoices") are in the UI registry; manage implies
@@ -319,8 +321,10 @@ Waiting on the main session: type check, lint, `pnpm test`, build and Playwright
   feature and the user holds `billing.view`.
 - [x] **Contract card (US-15.3, 15.4).** Billing gains Monthly retainer with the monthly fee,
   included hours and a rollover switch, and time and materials gains the hourly rate (both kept in
-  project metadata). The summary adds labour cost, cost to date, margin to date and the approved
-  hours not yet billed.
+  project metadata). Every billable type gains "VAT on invoices" (`tax_code`: VAT 16%, 8%, zero
+  rated or exempt), sent on each invoice line; without it an invoice carries no VAT, so a VAT
+  registered firm must set it. The summary adds labour cost, cost to date, margin to date and the
+  approved hours not yet billed.
 - [x] **Portfolio by client (US-15.4).** A By project and By client switch on the portfolio. By
   client lists each client's projects, contract value, invoiced, unbilled, labour cost, cost to
   date and margin, in the API's order, with notes when the rollup was cut short or treasury did
@@ -333,6 +337,82 @@ Waiting on the main session: type check, lint, `pnpm test`, build and Playwright
   desktop, `e2e/billing.spec.ts` with `e2e/billing-mocks.ts` (milestone invoice, price by percent,
   time invoice with a warning, nothing to bill, retainer month, read only, the plan lock, the
   client rollup and the portal list). `signIn` in `e2e/qa-mocks.ts` now takes the plan features.
+
+### Sprint 16: Planning depth (UI built 2026-11-17, against the deployed projects-api)
+
+I built the screens against projects-api's planning routes (`internal/http/handlers/planning.go`,
+contract in `projects-api/docs/api.md`, "Planning depth"). Not verified yet: the type check, lint,
+node tests, build and Playwright run come next, in one batch on the shared build slot.
+
+- [x] **Permissions.** The workload, baselines, risks, change requests, change approvals,
+  templates and automation codes are in the UI registry with the registry's names, and the
+  project manager, member and viewer roles carry the same grants as projects-api's `roles.go`
+  (only the projects administrator holds `workload.manage` and `templates.delete`).
+- [x] **Workload (US-16.1).** `/{org}/workload`, after My work in the nav (in More on a phone),
+  needs `workload_planning` and `workload.view`. People down the side, ISO weeks across, each cell
+  coloured by load (under 50, 50 to 79, 80 to 94, 95 to 100 percent, over capacity) with the
+  overloaded weeks marked in words too, and a "Not assigned" row. Filters: the starting week
+  (moved to its Monday, with earlier, later and this week), 4 to 26 weeks, a project team, and
+  done tasks. A cell opens its tasks in a side sheet, largest share first; Reassign hands a task
+  to someone on that project's team through the normal task update, swapping only the person the
+  cell belongs to. On a phone it shows one person at a time with the weeks as a list. Capacity
+  (`workload.manage`) sets the standard weekly hours and per person hours. Without the feature
+  the page shows the plan lock and calls nothing.
+- [x] **Baselines and slips (US-16.2).** On the Gantt page (gantt_chart and `baselines.view`):
+  a Timeline and Slips switch, a baseline picker (the latest by default, kept in `?baseline=`),
+  Save baseline (`baselines.add`, name and note) and Delete with a confirm (`baselines.delete`).
+  The chart draws each task's baseline as a thin bar under its live bar and the phone list adds
+  the baseline dates. The Slips view gives the summary sentence, slipped, pulled in, worst slip
+  and late milestones, tasks added or removed since, and every slipped item biggest first.
+- [x] **Risk register (US-16.3).** A Risks tab (`risks.view`). The 5x5 heat map (likelihood rows
+  from 5 down, impact columns from 1) filters the register when a cell is pressed and clears on a
+  second press, with a switch to count closed and occurred risks. The register is the shared
+  table (cards on a phone) with score, likelihood x impact, status, owner, review date and
+  mitigation, filtered by status and owner. The dialog raises or edits a risk (likelihood and
+  impact as 1 to 5 buttons with their names, a live score, owner from the project team, status,
+  category, review date, description, mitigation); an edit sends only what changed. Delete has a
+  confirm. Without `risks.change` the dialog is read only.
+- [x] **Change requests (US-16.4).** A Changes tab and a tenant-wide Approvals page
+  (`/{org}/approvals`, `change_approvals.manage`, waiting first with an All switch). Raise change
+  takes a title, the reason and the kind: scope; schedule, picking tasks and the days to move each
+  (with the new due date shown); or cost, either the project's own treasury budget or new budget
+  lines (name, fiscal year, phasing, dates, currency, and lines of category, name and amount, as
+  treasury's budget form takes them). The request sheet shows the shifts, the budget, the treasury
+  push status with the error and a retry when it failed, Approve with an optional comment and
+  Reject with a required one, and Withdraw for the requester (or a change request manager). My
+  own pending request says someone else has to decide it. Refusals (own request, not pending,
+  push done or in progress, a schedule conflict) are toasted in plain words.
+- [x] **Templates (US-16.5).** "New from template" on the projects list (`projects.add` and
+  `templates.view`): the gallery with starter templates first, then a start date and an optional
+  name, which creates the project and opens it. Own templates can be deleted (`templates.delete`);
+  starter ones show no delete. "Save as template" on the project page (`templates.add`).
+- [x] **Recurring tasks (US-16.6).** A Repeat section in the task drawer: does not repeat, every
+  day, week or month, or every few days, weeks or months, with an optional end date. It writes
+  `metadata.repeat` through the normal task update, keeping the rest of the metadata. The drawer
+  says "Repeats every ..." and board cards and list rows carry a repeat icon. The API's own
+  validation message is shown when it refuses.
+- [x] **Status rules and automations (US-16.7, 16.8).** An Automation tab (`project_automation`,
+  `automation.view` or `manage`; locked with Pro without the feature). The status rules editor
+  has the allowed moves as a matrix (a card per status on a phone, "Allow all" to reset a row) and
+  the fields required before entering each status, with custom `metadata.<key>` fields. The
+  automations editor lists up to 25 rules, each with a name, on switch, the trigger (to, and
+  optionally from) and up to 5 actions: assign (add or replace), notify (the assignees and named
+  people, with a message) or set a field (priority low to urgent, or a custom field). Both check
+  the API's limits before saving. `automation.view` sees the rules read only, each automation as
+  one sentence. The board asks `/task-moves/{taskId}` when a drag starts and marks each blocked
+  column with its reason; a drop there stays put with the reason as a toast. A 422
+  `status_rule_blocked` from a drag shows the API's message and snaps the card back. The drawer's
+  status menu names a blocked move and does not send it.
+- [x] Tests: `node-tests/planning.test.ts` (heat bands, ISO week labels, reassigning, the heat map
+  grid, cell filters, risk form rules, repeat rule text and checks, the moves matrix, required
+  fields, automation limits, change request checks and refusals, slip text and order, baseline
+  bars, the sprint 16 role grants) and, at phone and desktop, `e2e/planning.spec.ts` with
+  `e2e/planning-mocks.ts` (workload grid, drill-down reassign and capacity; save and delete a
+  baseline and the slips; raise a risk and filter by the heat map, edit and delete; raise schedule
+  and cost changes, approve, reject without a comment, the not pending refusal, withdraw my own,
+  retry a failed push, the approvals queue; start from a template, delete one, save as template;
+  repeat rule and its refusal; a blocked drag, a 422 drag, the drawer status menu, saving status
+  rules and an automation; the plan locks for workload, Gantt and automation; read-only roles).
 
 ### Sprint 1: Foundation & SSO
 - [x] Project scaffolding with Next.js 15.
