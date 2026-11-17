@@ -15,7 +15,6 @@
 
 Done: the service auth/me profile with the 404 fallback, the permission registry and its node tests, nav, page guards and buttons on service codes, the 403 split (unauthorized page, permission toast, upgrade toast), the project not-found state, paged tasks, the new task detail and Gantt shapes, Settings, Roles and access, tenant branding by slug and the step 8 sign out. Still open:
 
-- Waiting on the main session: type check, lint, `pnpm test`, build and Playwright for these changes, including the new `e2e/access.spec.ts`.
 - Adding a person to the organisation from Roles and access (`POST /users`). I left it out until I decide how it sits beside the accounts site invite; today the page links to the accounts site.
 - Adding a team member and committees still take a raw user id. They should pick people from `GET /rbac/users` with the shared SearchableCombobox. The team list itself now shows names.
 - The tenders list loads one page of 20; it needs Show more like tasks.
@@ -48,14 +47,20 @@ Screens built 13 November 2026 (see plan.md, "QA and acceptance"). Still open, e
 
 Sprint 12 screens built 2026-11-16 (see plan.md, "Sprint 12"): task drawer, several assignees, board with drag and drop and column editor, list with saved filters, calendar, Gantt chart with the critical path, My Work, live updates, offline status, comment and checklist edits, file uploads. Still open:
 
-- Waiting on the main session: `pnpm install` for `@dnd-kit/core` 6.3.1, type check, lint, `pnpm test` (`node-tests/work.test.ts`), build and Playwright (`e2e/work.spec.ts`).
-- Mention picker in comments. shared-ui-lib's RichTextEditor takes no extensions and has no Tiptap Mention, so I cannot type a mention yet. Mentions the API stores already show as chips. Needs a shared-ui-lib tag with an optional `mentions` prop (suggestion list of `{id, label}`, rendering `span[data-type="mention"][data-id][data-label]`); then the drawer passes the project members.
-- Waiting on the main session for the 2026-11-17 gap fixes (plan.md, "Gaps closed"): type check, lint, `pnpm test` and Playwright, including the new phone long press spec, which runs on the Chromium phone project only.
+- Verified 2026-11-17: type check, lint, 57 node tests, build and the full Playwright run (100 tests, phone and desktop) cover sprints 0b, 12, 13 and 14.
+- Mention picker in comments: done 2026-11-17 with shared-ui-lib v0.1.147 (the RichTextEditor `mentions` prop); the comment box offers the project's members.
 - Task files on the files page show their task's title only when that task is already cached; otherwise they read "A task" (still linked). A `task_title` on the attachment list from projects-api would fix it in one batched read.
 - The calendar still picks agenda or grid after hydration (the same `useMediaQuery` answer the Gantt page used to flash on). It could take the Gantt page's CSS approach if anyone notices.
 - Project activity feed on the project page. Source: plan.md Sprint 3.
-- Time tracking: timer and week timesheet, posting to ERP. Source: plan.md Sprint 3. Now sprint 13.
-- Client portal. Sprint 14.
+- Time tracking: built 2026-11-17 (plan.md, "Sprint 13"). Still open:
+  - Done 2026-11-17: the person picker searches the tenant through `GET /time/people` on the server, and the stop sends an `Idempotency-Key` built from the run (task and start time), so two devices stopping the same run log it once.
+  - The add row picker loads 100 projects and their tasks 100 at a time, with no server search on tasks.
+  - A timer on the list, calendar and My Work rows (the board card and the drawer have it today).
+- Client portal: built 2026-11-17 (plan.md, "Sprint 14"). Still open:
+  - Done 2026-11-17 with projects-api: the `X-Client-Invites` CORS header, the contact lookup for `portal.manage`, `last_decision` on the team's milestones, `author_kind` on thread entries and `progress` on the portal list (plan.md, "API follow-ups wired in").
+  - Fixed 2026-11-17: a revoked client's older thread entries kept carrying the Team tag. projects-api now stores the author kind on each comment when it is posted, so the Client tag stays.
+  - Invoices read as a placeholder until treasury lists a project's invoices over S2S.
+  - Ready for review lives on the milestones page, which needs `milestone_billing`; a firm without it cannot send milestones for review from the UI yet.
 - Billing and profitability screens. Sprint 15.
 - Workload, baselines, risks, change requests, templates, status rules. Sprint 16.
 - Project status reports. Source: plan.md Sprint 3. API sprint 7.

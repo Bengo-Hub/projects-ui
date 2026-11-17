@@ -1,13 +1,14 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import { SubscriptionProvider } from '@bengo-hub/shared-ui-lib/subscription';
 import { TenantBrandingProvider } from '@bengo-hub/shared-ui-lib/tenant';
 import { QueryProvider } from '@/providers/query-provider';
 import { AuthProvider } from '@/providers/auth-provider';
 import { ConsoleShell } from '@/components/layout/console-shell';
 import { useSubscription } from '@/hooks/use-subscription';
+import { isPortalPath } from '@/lib/portal/logic';
 
 const SSO_URL = process.env.NEXT_PUBLIC_SSO_URL || 'https://sso.codevertexafrica.com';
 
@@ -22,7 +23,11 @@ function OrgShell({ orgSlug, children }: { orgSlug: string; children: ReactNode 
 
 export default function OrgLayout({ children }: { children: ReactNode }) {
   const params = useParams();
+  const pathname = usePathname();
   const orgSlug = (params?.orgSlug as string) ?? '';
+  // The client portal (/{org}/portal) has its own sign-in and its own simple header
+  // (portal/layout.tsx): never the staff session, the staff SSO redirect or the console shell.
+  const portal = isPortalPath(pathname, orgSlug);
 
   return (
     <QueryProvider>
@@ -30,9 +35,13 @@ export default function OrgLayout({ children }: { children: ReactNode }) {
           drive --primary and the brand tokens; logo and name are read by the sidebar. Branding is
           edited in the accounts site only. */}
       <TenantBrandingProvider slug={orgSlug} authApiBase={SSO_URL} defaultPrimaryColor="#2563eb" defaultSecondaryColor="#1e3a8a">
-        <AuthProvider>
-          <OrgShell orgSlug={orgSlug}>{children}</OrgShell>
-        </AuthProvider>
+        {portal ? (
+          children
+        ) : (
+          <AuthProvider>
+            <OrgShell orgSlug={orgSlug}>{children}</OrgShell>
+          </AuthProvider>
+        )}
       </TenantBrandingProvider>
     </QueryProvider>
   );

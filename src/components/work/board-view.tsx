@@ -19,6 +19,7 @@ import { formatDate } from '@bengo-hub/shared-ui-lib/format';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AssigneeAvatars } from '@/components/work/assignees';
+import { TimerButton } from '@/components/time/timer';
 import { useBoardColumn, useBoardCounts, useChangeStatus } from '@/hooks/useTasks';
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
 import type { TaskAccess } from '@/hooks/useTaskAccess';
@@ -35,10 +36,12 @@ interface CardProps {
   onOpen?: (id: string) => void;
   dragging?: boolean;
   overlay?: boolean;
+  /** Shows the timer button (US-13.1); the drag overlay leaves it out. */
+  orgSlug?: string;
 }
 
-/** A card: title, priority, due date, checklist count and assignees. Memoised for long columns. */
-const TaskCard = memo(function TaskCard({ task, nameOf, queued, onOpen, dragging, overlay }: CardProps) {
+/** A card: title, priority, due date, checklist count, assignees and the timer. Memoised for long columns. */
+const TaskCard = memo(function TaskCard({ task, nameOf, queued, onOpen, dragging, overlay, orgSlug }: CardProps) {
   const list = checklistProgress(readChecklist(task.metadata));
   const overdue = !!task.due_date && task.due_date.slice(0, 10) < new Date().toISOString().slice(0, 10);
   return (
@@ -49,9 +52,12 @@ const TaskCard = memo(function TaskCard({ task, nameOf, queued, onOpen, dragging
         overlay && 'rotate-1 shadow-lg ring-1 ring-primary/40',
       )}
     >
-      <button type="button" onClick={() => onOpen?.(task.id)} className="block w-full break-words text-left text-sm font-medium hover:underline">
-        {task.title}
-      </button>
+      <div className="flex items-start gap-1">
+        <button type="button" onClick={() => onOpen?.(task.id)} className="block min-w-0 flex-1 break-words text-left text-sm font-medium hover:underline">
+          {task.title}
+        </button>
+        {orgSlug && !overlay && <TimerButton orgSlug={orgSlug} task={task} compact />}
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <Badge status={task.priority} />
         {task.due_date && <span className={cn('text-xs', overdue ? 'font-medium text-destructive' : 'text-muted-foreground')}>{formatDate(task.due_date)}</span>}
@@ -131,7 +137,7 @@ function Column({
       >
         {col.isLoading && [0, 1, 2].map((i) => <li key={i} className="h-20 animate-pulse rounded-md bg-muted" />)}
         {col.tasks.map((t) => (
-          <DraggableCard key={t.id} task={t} nameOf={nameOf} queued={queuedIds.has(t.id)} onOpen={onOpenTask} disabled={!access.canEdit(t)} />
+          <DraggableCard key={t.id} orgSlug={orgSlug} task={t} nameOf={nameOf} queued={queuedIds.has(t.id)} onOpen={onOpenTask} disabled={!access.canEdit(t)} />
         ))}
         {!col.isLoading && shown === 0 && <li className="px-1 py-6 text-center text-xs text-muted-foreground">No tasks</li>}
       </ul>

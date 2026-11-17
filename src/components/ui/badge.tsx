@@ -20,6 +20,12 @@ const statusColors: Record<string, string> = {
   // Milestone
   pending: 'bg-gray-100 text-gray-700',
   missed: 'bg-red-100 text-red-700',
+  // Milestone review (client portal)
+  ready_for_review: 'bg-amber-100 text-amber-800',
+  approved: 'bg-green-100 text-green-800',
+  changes_requested: 'bg-orange-100 text-orange-800',
+  // Portal client
+  invited: 'bg-slate-100 text-slate-700',
   // Tender
   draft: 'bg-slate-100 text-slate-600',
   evaluating: 'bg-purple-100 text-purple-700',

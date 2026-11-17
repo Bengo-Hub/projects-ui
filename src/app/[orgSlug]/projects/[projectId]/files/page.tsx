@@ -13,7 +13,10 @@ import { ProjectNotFound } from '@/components/common/not-found-state';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FeatureLocked } from '@/components/subscription/feature-locked';
 import { AttachFilesButton } from '@/components/work/task-attachments';
+import { ShareSwitch } from '@/components/portal/share-switch';
 import { useAttachments, useDeleteAttachment, useUploadAttachment } from '@/hooks/useAttachments';
+import { useClientPortalAccess, useShareFile } from '@/hooks/useClients';
+import { isClientVisible } from '@/lib/portal/logic';
 import { useProjectPeople } from '@/hooks/usePeople';
 import { useTaskAccess } from '@/hooks/useTaskAccess';
 import { useTaskTitles } from '@/hooks/useTaskTitles';
@@ -37,6 +40,8 @@ export default function ProjectFilesPage() {
   const remove = useDeleteAttachment(orgSlug, projectId);
   const [removing, setRemoving] = useState<Attachment | null>(null);
   const total = list.data?.pages[0]?.total ?? 0;
+  const portal = useClientPortalAccess();
+  const share = useShareFile(orgSlug, projectId);
 
   const columns = useMemo<DataTableColumn<Attachment>[]>(
     () => [
@@ -86,6 +91,24 @@ export default function ProjectFilesPage() {
         sortable: true,
         render: (f) => <span className="text-muted-foreground">{formatDateTime(f.uploaded_at)}</span>,
       },
+      ...(portal.canManage
+        ? [
+            {
+              key: 'client_visible',
+              header: 'Client',
+              filterable: true,
+              accessor: (f: Attachment) => (isClientVisible(f.metadata) ? 'Visible to client' : 'Team only'),
+              render: (f: Attachment) => (
+                <ShareSwitch
+                  checked={isClientVisible(f.metadata)}
+                  disabled={share.isPending}
+                  label={`Visible to client: ${f.file_name}`}
+                  onChange={(visible) => share.mutate({ attachmentId: f.id, visible })}
+                />
+              ),
+            } satisfies DataTableColumn<Attachment>,
+          ]
+        : []),
       {
         key: 'actions',
         header: <span className="sr-only">Actions</span>,
@@ -108,7 +131,7 @@ export default function ProjectFilesPage() {
           ) : null,
       },
     ],
-    [orgSlug, projectId, titleOf, nameOf, access],
+    [orgSlug, projectId, titleOf, nameOf, access, portal.canManage, share],
   );
 
   if (!access.isLoading && !access.collaboration) {

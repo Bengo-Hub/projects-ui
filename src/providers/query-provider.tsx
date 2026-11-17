@@ -5,10 +5,14 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { forbiddenKind, httpStatusOf, notifyForbiddenMutation } from '@/lib/api/errors';
+import { isPortalPath } from '@/lib/portal/logic';
 
 // The query cache is built once, so it reaches the current route through this handler, which the
 // provider replaces on every route change.
 let onQueryForbidden: ((err: unknown) => void) | null = null;
+// The client portal says why a call was refused on its own screens: no staff unauthorized page
+// and no "ask a projects administrator" toast for a client.
+let onPortal = false;
 
 /**
  * The query client with the 403 rules of the SSO guide: a permission or tenant 403 on a page load
@@ -22,7 +26,9 @@ export function QueryProvider({ children }: { children: ReactNode }) {
   const orgSlug = (params?.orgSlug as string | undefined) ?? '';
 
   useEffect(() => {
+    onPortal = isPortalPath(pathname, orgSlug);
     onQueryForbidden = (err) => {
+      if (onPortal) return;
       const kind = forbiddenKind(err);
       if (kind !== 'permission' && kind !== 'tenant') return;
       if (!orgSlug || pathname?.endsWith('/unauthorized')) return;
@@ -37,7 +43,7 @@ export function QueryProvider({ children }: { children: ReactNode }) {
     () =>
       new QueryClient({
         queryCache: new QueryCache({ onError: (err) => onQueryForbidden?.(err) }),
-        mutationCache: new MutationCache({ onError: (err) => notifyForbiddenMutation(err) }),
+        mutationCache: new MutationCache({ onError: (err) => !onPortal && notifyForbiddenMutation(err) }),
         defaultOptions: {
           queries: {
             staleTime: 5 * 60 * 1000,

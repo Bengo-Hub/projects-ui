@@ -5,6 +5,7 @@ import { Menu, User } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useVisibleServices, serviceTagsFromAccessToken, AppSwitcherGrid, AppSwitcherTrigger, type ServiceKey } from '@bengo-hub/shared-ui-lib/app-switcher';
 import { AccountPanel } from '@bengo-hub/shared-ui-lib/account-panel';
+import { TimerPill } from '@/components/time/timer';
 
 // 'projects' itself is omitted (never links to itself, mirrors every other *-ui).
 const SERVICE_URLS: Partial<Record<ServiceKey, string>> = {
@@ -58,6 +59,7 @@ export default function Header({ orgSlug, title, onMenu }: HeaderProps) {
         </span>
       </div>
       <div className="flex shrink-0 items-center gap-1">
+        {user && <TimerPill orgSlug={orgSlug} />}
         {user && <AppSwitcherTrigger services={services} />}
         {user && (
           <div className="relative">

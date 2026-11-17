@@ -121,7 +121,7 @@ const b64url = (s: string) => Buffer.from(s).toString('base64').replace(/=+$/, '
 function fixtureToken(): string {
   const claims = {
     subscription_status: 'ACTIVE',
-    subscription_features: ['project_management', 'task_tracking', 'team_collaboration', 'time_tracking', 'client_portal', 'budget_tracking', 'gantt_chart'],
+    subscription_features: ['project_management', 'task_tracking', 'team_collaboration', 'time_tracking', 'attendance', 'client_portal', 'budget_tracking', 'gantt_chart', 'milestone_billing'],
     active_service_tags: ['projects'],
   };
   return `${b64url('{"alg":"none"}')}.${b64url(JSON.stringify(claims))}.e2e`; // secret-scan:allow (unsigned fixture token for the mocked SSO session)

@@ -24,22 +24,25 @@ function b64urlEncode(array: Uint8Array): string {
     .replace(/=+$/, '');
 }
 
-export function storeVerifier(verifier: string) {
-  sessionStorage.setItem('pkce_verifier', verifier);
+// ns keeps two sign-ins in one tab apart: the staff app uses none, the client portal 'portal_', so
+// a portal sign-in never consumes the staff app's verifier or the other way round.
+
+export function storeVerifier(verifier: string, ns = '') {
+  sessionStorage.setItem(`${ns}pkce_verifier`, verifier);
 }
 
-export function consumeVerifier(): string | null {
-  const v = sessionStorage.getItem('pkce_verifier');
-  sessionStorage.removeItem('pkce_verifier');
+export function consumeVerifier(ns = ''): string | null {
+  const v = sessionStorage.getItem(`${ns}pkce_verifier`);
+  sessionStorage.removeItem(`${ns}pkce_verifier`);
   return v;
 }
 
-export function storeState(state: string) {
-  sessionStorage.setItem('pkce_state', state);
+export function storeState(state: string, ns = '') {
+  sessionStorage.setItem(`${ns}pkce_state`, state);
 }
 
-export function consumeState(): string | null {
-  const s = sessionStorage.getItem('pkce_state');
-  sessionStorage.removeItem('pkce_state');
+export function consumeState(ns = ''): string | null {
+  const s = sessionStorage.getItem(`${ns}pkce_state`);
+  sessionStorage.removeItem(`${ns}pkce_state`);
   return s;
 }

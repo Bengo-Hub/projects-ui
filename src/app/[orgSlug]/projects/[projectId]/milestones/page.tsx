@@ -4,7 +4,11 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { Plus, Flag } from 'lucide-react';
 import { useFeature } from '@bengo-hub/shared-ui-lib/subscription';
-import { useMilestones, useCreateMilestone } from '@/hooks/useMilestones';
+import { useMilestones, useCreateMilestone, useUpdateMilestone } from '@/hooks/useMilestones';
+import { ConfirmDialog } from '@/components/common/confirm-dialog';
+import { DecisionNote } from '@/components/portal/decision-note';
+import { canMarkReady, teamMilestoneLabel } from '@/lib/portal/logic';
+import type { Milestone } from '@/types';
 import { FeatureLocked } from '@/components/subscription/feature-locked';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -94,11 +98,16 @@ export default function MilestonesPage() {
   const [showCreate, setShowCreate] = useState(false);
 
   const hasMilestoneBilling = useFeature('milestone_billing');
+  const hasClientPortal = useFeature('client_portal');
 
   const { data, isLoading, isError, error } = useMilestones(orgSlug, projectId);
   const createMilestone = useCreateMilestone(orgSlug, projectId);
+  const updateMilestone = useUpdateMilestone(orgSlug, projectId);
+  const [reviewing, setReviewing] = useState<Milestone | null>(null);
   const { can } = useServicePermissions();
   const canAdd = can(PERMS.milestonesAdd);
+  // Putting a milestone up for the client's review is a milestone edit that notifies the clients.
+  const canSendForReview = hasClientPortal && can(PERMS.milestonesChange);
 
   const milestones = (data?.data ?? []).sort((a, b) => {
     if (!a.target_date) return 1;
@@ -147,7 +156,17 @@ export default function MilestonesPage() {
             <div key={m.id} className="flex gap-4">
               {/* Timeline indicator */}
               <div className="flex flex-col items-center">
-                <div className={`mt-1 h-3 w-3 rounded-full ${m.status === 'completed' ? 'bg-success' : m.status === 'missed' ? 'bg-destructive' : 'bg-primary'}`} />
+                <div
+                  className={`mt-1 h-3 w-3 rounded-full ${
+                    m.status === 'completed' || m.status === 'approved'
+                      ? 'bg-success'
+                      : m.status === 'missed'
+                        ? 'bg-destructive'
+                        : m.status === 'ready_for_review' || m.status === 'changes_requested'
+                          ? 'bg-warning'
+                          : 'bg-primary'
+                  }`}
+                />
                 {idx < milestones.length - 1 && <div className="w-px flex-1 bg-border mt-1" />}
               </div>
               <Card className="flex-1 mb-2">
@@ -160,14 +179,41 @@ export default function MilestonesPage() {
                         <p className="mt-1 text-xs text-muted-foreground">Target: {formatDate(m.target_date)}</p>
                       )}
                     </div>
-                    <Badge status={m.status} className="shrink-0" />
+                    <Badge status={m.status} className="shrink-0">
+                      {teamMilestoneLabel(m.status)}
+                    </Badge>
                   </div>
+                  {m.last_decision && <DecisionNote decision={m.last_decision} className="mt-2" />}
+                  {canSendForReview && canMarkReady(m.status) && (
+                    <div className="mt-3 flex justify-end">
+                      <Button variant="outline" size="sm" className="h-10 sm:h-8" onClick={() => setReviewing(m)}>
+                        Ready for review
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!reviewing}
+        onOpenChange={(o) => !o && setReviewing(null)}
+        title="Send this milestone for client review?"
+        description={
+          reviewing
+            ? `The project's clients get an email and a WhatsApp message asking them to approve "${reviewing.name}" or ask for changes in the portal.`
+            : undefined
+        }
+        confirmLabel="Send for review"
+        variant="info"
+        loading={updateMilestone.isPending}
+        onConfirm={() =>
+          reviewing && updateMilestone.mutate({ id: reviewing.id, data: { status: 'ready_for_review' } }, { onSettled: () => setReviewing(null) })
+        }
+      />
 
       {showCreate && (
         <CreateMilestoneModal

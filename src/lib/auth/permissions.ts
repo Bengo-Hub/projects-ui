@@ -168,7 +168,7 @@ const PROJECT_MANAGER: string[] = [
   PERMS.tasksManage, PERMS.milestonesView, PERMS.milestonesAdd, PERMS.milestonesChange, PERMS.milestonesDelete,
   PERMS.membersView, PERMS.membersManage, PERMS.commentsView, PERMS.commentsAdd, PERMS.commentsManage,
   PERMS.tendersView, PERMS.tendersAdd, PERMS.tendersChange, PERMS.financialsView,
-  PERMS.timeView, PERMS.timeAdd, PERMS.timeManage, PERMS.portalView, PERMS.qaManage,
+  PERMS.timeView, PERMS.timeAdd, PERMS.timeManage, PERMS.portalManage, PERMS.qaManage,
 ];
 const MEMBER: string[] = [
   PERMS.projectsView, PERMS.tasksView, PERMS.tasksAdd, PERMS.tasksChangeOwn,
@@ -189,7 +189,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
 
 /**
  * The default projects role for global auth-api roles, as projects-api's MapGlobalRoles: admin
- * level roles give projects_admin, manager and staff give member, anyone else viewer.
+ * level roles give projects_admin, manager and staff give member, the portal's client role gives
+ * client (a staff role beside it wins), anyone else viewer.
  */
 export function roleFromGlobalRoles(global: readonly string[]): string {
   let best = 'viewer';
@@ -205,6 +206,9 @@ export function roleFromGlobalRoles(global: readonly string[]): string {
       case 'manager':
       case 'staff':
         best = 'member';
+        break;
+      case 'client':
+        if (best === 'viewer') best = 'client';
         break;
     }
   }

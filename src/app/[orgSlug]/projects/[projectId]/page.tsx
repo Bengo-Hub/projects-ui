@@ -34,6 +34,7 @@ export default function ProjectDetailPage() {
   const hasMilestoneBilling = useFeature('milestone_billing');
   const hasBudgetTracking = useFeature('budget_tracking');
   const hasCollaboration = useFeature('team_collaboration');
+  const hasClientPortal = useFeature('client_portal');
 
   if (isLoading) return <PageLoading />;
   if (isNotFound(error)) return <ProjectNotFound orgSlug={orgSlug} />;
@@ -66,6 +67,19 @@ export default function ProjectDetailPage() {
       label: 'Financials',
       locked: !hasBudgetTracking,
       perm: PERMS.financialsView,
+    },
+    // Client portal (sprint 14): every Projects tier has client_portal, so a missing feature locks.
+    {
+      href: `/${orgSlug}/projects/${projectId}/clients`,
+      label: 'Clients',
+      locked: !hasClientPortal,
+      perm: PERMS.portalManage,
+    },
+    {
+      href: `/${orgSlug}/projects/${projectId}/client-thread`,
+      label: 'Client thread',
+      locked: !hasClientPortal,
+      perm: PERMS.commentsView,
     },
   ].filter((t) => can(t.perm));
 

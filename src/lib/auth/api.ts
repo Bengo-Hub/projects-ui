@@ -1,5 +1,7 @@
 const SSO_BASE_URL = process.env.NEXT_PUBLIC_SSO_URL || 'https://sso.codevertexafrica.com';
 const SSO_CLIENT_ID = process.env.NEXT_PUBLIC_SSO_CLIENT_ID || 'projects-ui';
+/** The client portal's own OAuth client (auth-api cmd/seed): self sign-up joins as client. */
+export const PORTAL_CLIENT_ID = process.env.NEXT_PUBLIC_PORTAL_CLIENT_ID || 'projects-portal';
 
 export interface AuthorizeParams {
   codeChallenge: string;
@@ -7,18 +9,21 @@ export interface AuthorizeParams {
   redirectUri: string;
   scope?: string;
   tenant?: string;
+  /** Defaults to the staff app's client (projects-ui). */
+  clientId?: string;
 }
 
 export interface TokenExchangeParams {
   code: string;
   codeVerifier: string;
   redirectUri: string;
+  clientId?: string;
 }
 
-export function buildAuthorizeUrl({ codeChallenge, state, redirectUri, scope, tenant: tenantParam }: AuthorizeParams): string {
+export function buildAuthorizeUrl({ codeChallenge, state, redirectUri, scope, tenant: tenantParam, clientId }: AuthorizeParams): string {
   const url = new URL('/api/v1/authorize', SSO_BASE_URL);
   url.searchParams.set('response_type', 'code');
-  url.searchParams.set('client_id', SSO_CLIENT_ID);
+  url.searchParams.set('client_id', clientId || SSO_CLIENT_ID);
   url.searchParams.set('redirect_uri', redirectUri);
   url.searchParams.set('scope', scope || 'openid profile email offline_access');
   url.searchParams.set('state', state);
@@ -46,7 +51,7 @@ export async function exchangeCodeForTokens(params: TokenExchangeParams) {
     grant_type: 'authorization_code',
     code: params.code,
     redirect_uri: params.redirectUri,
-    client_id: SSO_CLIENT_ID,
+    client_id: params.clientId || SSO_CLIENT_ID,
     code_verifier: params.codeVerifier,
   });
 
@@ -64,7 +69,7 @@ export async function exchangeCodeForTokens(params: TokenExchangeParams) {
   return response.json();
 }
 
-export async function refreshTokens(refreshToken: string): Promise<{
+export async function refreshTokens(refreshToken: string, clientId: string = SSO_CLIENT_ID): Promise<{
   access_token: string;
   refresh_token?: string;
   expires_in?: number;
@@ -72,7 +77,7 @@ export async function refreshTokens(refreshToken: string): Promise<{
   const response = await fetch(`${SSO_BASE_URL}/api/v1/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh_token: refreshToken, client_id: SSO_CLIENT_ID }),
+    body: JSON.stringify({ refresh_token: refreshToken, client_id: clientId }),
   });
   // The status tells the shared refresher a refused session (sign in again) from an outage.
   if (!response.ok) throw Object.assign(new Error('Token refresh failed'), { status: response.status });

@@ -1,3 +1,5 @@
+import type { MilestoneDecision } from './portal';
+
 export interface Project {
   id: string;
   tenant_id: string;
@@ -87,6 +89,8 @@ export interface Attachment {
   uploaded_by: string;
   uploaded_at: string;
   url: string;
+  /** Server owned; client_visible true shares the file in the client portal. */
+  metadata?: Record<string, unknown>;
 }
 
 /** POST /attachments/uploads: where to PUT the file, then confirm with key. */
@@ -118,10 +122,16 @@ export interface Milestone {
   name: string;
   description?: string;
   target_date?: string;
-  status: string; // pending, in_progress, completed, missed
+  /**
+   * pending, in_progress, completed, missed; ready_for_review (set by the team), approved and
+   * changes_requested (set only by a client's decision in the portal).
+   */
+  status: string;
   completed_at?: string;
   created_at: string;
   updated_at: string;
+  /** The client's latest decision from the portal, null when no client decided. */
+  last_decision?: MilestoneDecision | null;
 }
 
 export interface ProjectMember {

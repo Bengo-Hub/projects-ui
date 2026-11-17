@@ -5,6 +5,7 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { tasksApi } from '@/lib/api/tasks';
 import { commentsApi } from '@/lib/api/comments';
+import { timeApi, type TimerStopped } from '@/lib/api/time';
 import { apiErrorMessage } from '@/lib/api/errors';
 import {
   QUEUE_STORAGE_KEY,
@@ -12,12 +13,15 @@ import {
   deserialize,
   enqueue,
   isRetryable,
+  isTimeEdit,
   markAttempt,
   prune,
+  replaceEdit,
   serialize,
   type QueuedEdit,
   type QueuedEditInput,
 } from '@/lib/work/offline-queue';
+import { loggedSegments, remainingStart, sameStart } from '@/lib/work/time';
 
 // One queue per signed-in user, kept in localStorage so edits made offline survive a reload. The
 // runner (OfflineQueueRunner in the console shell) drains it when the browser is back online.
@@ -71,6 +75,10 @@ export function newIdempotencyKey(): string {
 
 function invalidateFor(e: QueuedEdit) {
   if (!client) return;
+  if (isTimeEdit(e)) {
+    void client.invalidateQueries({ queryKey: ['time', e.orgSlug] });
+    return;
+  }
   void client.invalidateQueries({ queryKey: ['tasks', e.orgSlug, e.projectId, 'detail', e.taskId] });
   if (e.kind === 'status') {
     void client.invalidateQueries({ queryKey: ['tasks', e.orgSlug, e.projectId] });
@@ -87,6 +95,36 @@ function send(e: QueuedEdit): Promise<unknown> {
       return commentsApi.createOnTask(e.orgSlug, e.projectId, e.taskId, { content: e.content }, e.key);
     case 'checklist':
       return tasksApi.checklist(e.orgSlug, e.projectId, e.taskId, e.op, e.key);
+    case 'time-entry':
+      // A PUT sets the day's hours, so sending it again changes nothing twice.
+      return timeApi.putEntry(e.orgSlug, e.entry);
+    case 'timer-stop':
+      return sendTimerStop(e);
+  }
+}
+
+/**
+ * Sends a timer stop. The stop route takes no Idempotency-Key and adds the run to ERP, so a stop
+ * sent twice would log the time twice. The server clears its timer when a stop has fully logged,
+ * so the task is asked first: when it no longer runs the timer this stop belongs to (same start),
+ * the run was already logged (an answer lost on the way back, or another device stopped it) and
+ * nothing is sent. A stop across midnight that failed after logging its first date answers
+ * logged_segments; the waiting stop then moves its start to the next midnight, so a retry sends
+ * only the rest.
+ */
+export async function sendTimerStop(e: Extract<QueuedEdit, { kind: 'timer-stop' }>): Promise<TimerStopped | { alreadyLogged: true }> {
+  const running = await timeApi.taskTimer(e.orgSlug, e.taskId);
+  if (!running || !sameStart(running.started_at, e.timerStartedAt)) return { alreadyLogged: true };
+  try {
+    return await timeApi.stopTimer(e.orgSlug, e.stop, e.tz);
+  } catch (err) {
+    const logged = loggedSegments(err);
+    if (logged.length > 0) {
+      const moved = { ...e, stop: { ...e.stop, started_at: remainingStart(e.stop.started_at, logged, e.tz) } };
+      if (queue.some((q) => q.key === e.key)) set(replaceEdit(queue, moved));
+      throw Object.assign(err as object, { queuedAs: moved });
+    }
+    throw err;
   }
 }
 
@@ -94,6 +132,8 @@ const LABEL: Record<QueuedEdit['kind'], string> = {
   status: 'A status change',
   comment: 'A comment',
   checklist: 'A checklist change',
+  'time-entry': 'A time entry',
+  'timer-stop': 'A timer stop',
 };
 
 /** Sends waiting edits in order; stops at the first one that still cannot get through. */
@@ -127,16 +167,18 @@ export async function drainQueue() {
  * the mutationFn of the offline-tolerant mutations (networkMode 'always').
  */
 export async function sendOrQueue<T>(edit: QueuedEditInput, sendNow: () => Promise<T>): Promise<{ queued: true } | { queued: false; result: T }> {
-  const stamp = () => set(enqueue(queue, { ...edit, createdAt: Date.now(), attempts: 0 } as QueuedEdit));
+  const stamp = (e: QueuedEditInput) => set(enqueue(queue, { ...e, createdAt: Date.now(), attempts: 0 } as QueuedEdit));
   if (isOffline()) {
-    stamp();
+    stamp(edit);
     return { queued: true };
   }
   try {
     return { queued: false, result: await sendNow() };
   } catch (err) {
     if (isRetryable(err)) {
-      stamp();
+      // A partial timer stop says what is left to send (sendTimerStop).
+      const rest = (err as { queuedAs?: QueuedEditInput }).queuedAs;
+      stamp(rest ?? edit);
       return { queued: true };
     }
     throw err;

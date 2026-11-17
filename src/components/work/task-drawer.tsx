@@ -14,6 +14,10 @@ import { PRIORITY_OPTIONS, StatusPill, statusLabel } from '@/components/work/sta
 import { TaskChecklist } from '@/components/work/task-checklist';
 import { TaskComments } from '@/components/work/task-comments';
 import { TaskAttachments } from '@/components/work/task-attachments';
+import { TaskTimerSection } from '@/components/time/timer';
+import { ShareSwitch } from '@/components/portal/share-switch';
+import { useClientPortalAccess, useShareTask } from '@/hooks/useClients';
+import { isClientVisible } from '@/lib/portal/logic';
 import {
   useChangeStatus,
   useCreateTask,
@@ -280,6 +284,10 @@ function TaskBody({
         </Field>
       </div>
 
+      <ClientSharing orgSlug={orgSlug} projectId={projectId} task={task} />
+
+      <TaskTimerSection orgSlug={orgSlug} task={task} />
+
       <section aria-labelledby="description-heading" className="space-y-2">
         <div className="flex items-center justify-between">
           <h3 id="description-heading" className="text-sm font-semibold">
@@ -361,6 +369,30 @@ function TaskBody({
             },
           })
         }
+      />
+    </div>
+  );
+}
+
+/** The "Visible to client" switch (projects.portal.manage and the client_portal feature only). */
+function ClientSharing({ orgSlug, projectId, task }: { orgSlug: string; projectId: string; task: TaskDetail }) {
+  const portal = useClientPortalAccess();
+  const share = useShareTask(orgSlug, projectId);
+  if (!portal.canManage) return null;
+  const shared = isClientVisible(task.metadata);
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-1.5">
+      <div className="min-w-0">
+        <p className="text-sm font-medium">Visible to client</p>
+        <p id="client-sharing-help" className="text-xs text-muted-foreground">
+          Shows the title, description, dates and progress in the client portal. Comments, hours and assignees stay internal.
+        </p>
+      </div>
+      <ShareSwitch
+        checked={shared}
+        disabled={share.isPending}
+        describedBy="client-sharing-help"
+        onChange={(visible) => share.mutate({ taskId: task.id, visible })}
       />
     </div>
   );

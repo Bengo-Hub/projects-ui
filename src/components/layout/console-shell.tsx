@@ -12,7 +12,7 @@ import { PlatformScopeGuard } from '@/components/layout/platform-scope-guard';
 import { SubscriptionBanner } from '@/components/subscription/subscription-banner';
 import { VerifyEmailPrompt } from '@/components/auth/VerifyEmailPrompt';
 import { OfflineQueueBar } from '@/components/work/offline-queue-bar';
-import { navItemFor, navPathActive } from '@/lib/nav';
+import { BOTTOM_NAV_MAX, navItemFor, navPathActive } from '@/lib/nav';
 
 const COLLAPSE_KEY = 'projects-sidebar-collapsed';
 const COLLAPSE_EVENT = 'projects-sidebar-collapsed-change';
@@ -66,6 +66,7 @@ export function ConsoleShell({ orgSlug, children }: { orgSlug: string; children:
   const tabs: MobileNavTab[] = groups
     .flatMap((g) => g.items)
     .filter((i) => i.bottomNav && (!i.subFeature || enabled[i.subFeature]))
+    .slice(0, BOTTOM_NAV_MAX)
     .map((i) => ({
       key: i.path,
       label: i.shortLabel ?? i.label,

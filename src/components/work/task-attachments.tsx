@@ -6,7 +6,10 @@ import { formatDateTime } from '@bengo-hub/shared-ui-lib/format';
 import { Button } from '@/components/ui/button';
 import { ShowMore } from '@/components/common/list-parts';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
+import { ShareSwitch } from '@/components/portal/share-switch';
 import { useAttachments, useDeleteAttachment, useUploadAttachment } from '@/hooks/useAttachments';
+import { useClientPortalAccess, useShareFile } from '@/hooks/useClients';
+import { isClientVisible } from '@/lib/portal/logic';
 import type { TaskAccess } from '@/hooks/useTaskAccess';
 import { fileSize } from '@/lib/work/files';
 import type { Attachment } from '@/types';
@@ -54,6 +57,8 @@ export function TaskAttachments({
   const remove = useDeleteAttachment(orgSlug, projectId);
   const [removing, setRemoving] = useState<Attachment | null>(null);
   const [over, setOver] = useState(false);
+  const portal = useClientPortalAccess();
+  const share = useShareFile(orgSlug, projectId);
 
   const sendFiles = (files: FileList | null) => {
     for (const f of Array.from(files ?? [])) upload.mutate(f);
@@ -105,6 +110,16 @@ export function TaskAttachments({
                   {fileSize(f.file_size)} · {nameOf(f.uploaded_by)} · {formatDateTime(f.uploaded_at)}
                 </span>
               </div>
+              {portal.canManage && (
+                <ShareSwitch
+                  checked={isClientVisible(f.metadata)}
+                  disabled={share.isPending}
+                  label={`Visible to client: ${f.file_name}`}
+                  onChange={(visible) => share.mutate({ attachmentId: f.id, visible })}
+                  compact
+                  className="shrink-0"
+                />
+              )}
               {access.canDeleteFile(f) && (
                 <button
                   type="button"

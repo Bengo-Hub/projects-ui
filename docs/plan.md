@@ -171,6 +171,126 @@ contract is projects-api `docs/api.md`, "Work management". Waiting on the main s
 Open from this sprint, in `docs/backlog.md`: the mention picker (the shared editor has no mention
 extension yet).
 
+### Sprint 13: Time tracking (UI built 2026-11-17, ships with projects-api bf96ccd)
+
+I built the timer and the week timesheet over projects-api's `/time` routes (`docs/api.md`, "Time").
+ERP owns the hours: every save lands on the user's ERP timesheet and approval stays in ERP. Every
+screen needs the `time_tracking` and `attendance` features (the API checks both) and the
+`projects.time.*` codes. Waiting on the main session: type check, lint, `pnpm test` and
+Playwright. No new dependencies.
+
+- [x] **Timer (US-13.1).** A start and stop button in the task drawer (with Discard, behind a
+  ConfirmDialog, which logs nothing) and on every board card. Starting needs a connection, as the
+  server stamps the start and stops any other timer; the toast says how much the stopped one
+  logged. A pill in the header shows the running timer on every page: elapsed time, the task (a
+  link to it) and stop. The server is the source of truth (`GET /time/timer`, read again on focus),
+  so a reload or another device shows the same timer. The browser keeps a copy per user and
+  organisation in localStorage, which the pill falls back on when the server cannot be reached.
+  Stopping sends the browser's own start and stop in RFC 3339 and my zone.
+- [x] **Week timesheet (US-13.2).** `/{org}/time`, in the sidebar and the phone bar only when the
+  plan and `time.view_own` allow (the bar keeps four tabs, so Portfolio moves to More when Time is
+  there). From 768 px a grid of projects and tasks by day with totals per row and day, the week
+  total and the billable total. Below it a day strip with each day's total and that day's rows.
+  Cells take `1.5` or `1:30`, save on Enter or when focus leaves, and a note button opens the
+  hours and note together. Week arrows, This week, the status badge, a rejection reason from ERP,
+  Add a row (a project I can see, then one of its tasks or the whole project, both in the shared
+  SearchableCombobox) and Submit week behind a ConfirmDialog. People with `time.view` pick
+  someone else's week from the members of their projects; only `time.manage` edits it, and
+  submit is for my own week only.
+- [x] **Billable (US-13.3).** Each row shows its billable flag. The switch shows only on time and
+  materials projects and re-sends the row's logged days with the new flag; a 422 is a toast and
+  the cell rolls back.
+- [x] **Offline (US-13.5).** Week edits and timer stops join the sprint 12 queue and the shared
+  OfflineSyncBanner. A cell is keyed by user, project, task and date, so a newer edit replaces the
+  waiting one, and a PUT sets the hours, so a replay changes nothing twice. The stop route takes
+  no Idempotency-Key and adds the run to ERP, so a stop is keyed by the task and the run's start
+  and, before it is sent, the runner asks the task for its timer: when the server no longer runs
+  that timer (same start), the run was already logged and nothing is sent. A stop across
+  midnight that fails after logging its first date answers `logged_segments`; the waiting stop
+  then moves its start to the next midnight in its zone, so the retry sends only the rest. While a
+  stop waits, the header shows no timer even though the server still runs it. Time waits a week
+  in the queue, task edits a day.
+- [x] **Errors.** `no_employee_record` is an empty state on the week ("Your account has no
+  employee record in ERP. Ask HR to link it.") and a single toast elsewhere, never retried.
+  `timesheet_locked`, `nothing_to_submit` and `validation_error` show the API's message;
+  `erp_unavailable` shows the retry state.
+- [x] Tests: `node-tests/time.test.ts` (week maths, zones and midnight, hours, totals, elapsed
+  time, the partial stop, queue keys and the time queue) and `e2e/time.spec.ts` with
+  `e2e/time-mocks.ts` at phone and desktop (timer from a card with the header pill across a
+  reload, a cell edit and submit, the no employee state, the billable switch hidden on a fixed
+  fee project). The mocked token now carries `attendance`.
+
+### Sprint 14: Client portal (UI built 2026-11-17, with the uncommitted projects-api portal)
+
+I built the client portal and the team's client screens over projects-api's portal routes
+(`docs/api.md`, "Client portal"). Every screen needs the `client_portal` feature, which every
+Projects tier has. Waiting on the main session: type check, `pnpm test` and Playwright. No new
+dependencies.
+
+- [x] **Portal sign-in (US-14.1).** The portal lives at `/{org}/portal` and signs in with auth-api's
+  `projects-portal` client (PKCE, `tenant={org}`, callback `/{org}/portal/auth/callback` on the
+  page's own origin; auth-api's seed registers the production URLs and `http://localhost:3000/{slug}/portal/auth/callback`).
+  The portal session is kept apart from the staff one: its own store (`src/store/portal-auth.ts`,
+  saved under `projects-portal-auth-storage`), its own PKCE keys in sessionStorage (prefix
+  `portal_`), its own axios client (`src/lib/api/portal.ts`) and its own cross-tab refresher on the
+  `projects-portal` client id. The org layout leaves `/{org}/portal` out of the staff AuthProvider
+  and console shell, and the query client skips the staff unauthorized page and permission toasts
+  there. Signing out of the portal clears only the portal's keys, so a staff member trying the
+  portal stays signed in to the staff app. The shared PKCE and refresh helpers now take a client id
+  and a storage prefix; the staff app passes neither and behaves as before.
+- [x] **What a client sees (US-14.2).** Phone first, no staff shell: a header with the firm's logo
+  and name (the shared TenantBrandingProvider) and Sign out. The landing lists the projects shared
+  with the client as cards with progress and how many milestones wait for them. When the list
+  answers `X-Client-Invites: email_not_verified`, a banner asks them to verify their email on the
+  accounts site (`/dashboard/profile?tab=email`) to open the projects they were invited to. The
+  project page has the summary and tabs for milestones, shared tasks (read only), files (signed
+  links, fetched again after 10 minutes), invoices and messages. Invoices answering
+  `available: false` read "Invoices will appear here", never an error. An account that is not a
+  client of the firm, or a plan without the portal, gets a plain explanation instead of a staff
+  page.
+- [x] **Approve a milestone (US-14.3).** While `can_decide`, a milestone shows Approve or Request
+  changes with a comment (required for changes, at most 2000 characters, checked before sending).
+  A 409 `milestone_not_ready` says the milestone no longer waits for their review and reloads the
+  list. A notice link with `?milestone={id}` scrolls to and highlights that milestone. On the team
+  side, the milestones page has Ready for review (behind a ConfirmDialog, as it notifies the
+  clients) on any milestone that is not waiting, approved or completed, for people with
+  `milestones.change`.
+- [x] **Client thread (US-14.4).** The same thread component for the client (Messages tab) and
+  the team (a Client thread tab on the project, `comments.view` to read and `comments.add` to
+  post). It uses the shared RichTextEditor with no mention list, and every post carries an
+  Idempotency-Key.
+- [x] **Clients and sharing.** A Clients tab on the project (`portal.manage`) lists the clients,
+  invites from a marketflow contact with the same picker as the contract card (a resent invite
+  says so) and removes one behind a ConfirmDialog. A "Visible to client" switch sits in the task
+  drawer and on file rows (files page and the drawer's files), for `portal.manage` only. The
+  UI's project manager role now holds `portal.manage` and the global client role maps to client,
+  as in projects-api.
+- [x] Tests: `node-tests/portal.test.ts` (portal paths and the safe return, the invite header,
+  review rules and the decision check, refusals, roles) and, at phone and desktop,
+  `e2e/portal.spec.ts` (landing with and without the banner, approve, request changes with the
+  409, invoices and files, a thread post) and `e2e/clients.spec.ts` (invite and remove, no tab
+  or switch without `portal.manage`, task and file sharing, the team's thread post), with
+  `e2e/portal-mocks.ts`. The portal fixture token carries the client role.
+- [x] **API follow-ups wired in (2026-11-17).** projects-api closed the four gaps I had listed, and
+  the screens use them:
+  - The landing cards read `progress` from `GET /portal/projects` (percent, milestones done and
+    how many wait for the client) and no longer ask for a summary per card. A decision refreshes
+    the list too.
+  - The team's milestones page shows the client's last decision in place, with their comment and
+    who sent it (`DecisionNote`, the same block the portal uses). `last_decision.decision` is now
+    the outcome, `approved` or `changes_requested`, on both sides.
+  - Thread entries carry a Client or Team tag from `author_kind`, on the portal and the team's
+    Client thread tab.
+  - The contact lookup opens to `portal.manage`, so the Clients tab always shows the picker; I
+    removed the "ask a project manager" note.
+  - The browser can now read `X-Client-Invites`, so the verify email banner works across origins.
+  - Tests: `node-tests/portal.test.ts` covers `decisionSummary`, `landingNote` and
+    `threadAuthor`; the e2e mocks carry the new fields, `portal.spec.ts` checks that the landing
+    makes no summary call and that the thread tags its entries, and `clients.spec.ts` checks the
+    decision on the milestones page. `freshPortal` now applies its overrides, which it silently
+    dropped before, so the unverified email and 409 specs really run those cases. The staff
+    fixture token gains `milestone_billing` so the milestones page renders.
+
 ### Sprint 1: Foundation & SSO
 - [x] Project scaffolding with Next.js 15.
 - [x] SSO integration with `auth-ui`.

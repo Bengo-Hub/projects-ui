@@ -9,7 +9,7 @@ import { UPGRADE_URL } from '@/components/subscription/subscription-banner';
 import { useTenantBranding } from '@bengo-hub/shared-ui-lib/tenant';
 import { MediaImage } from '@bengo-hub/shared-ui-lib/media';
 import { useServicePermissions } from '@/hooks/usePermissions';
-import { navPathActive, visibleNav, type NavGroup, type NavItem } from '@/lib/nav';
+import { navPathActive, visibleNav, type HiddenFeature, type NavGroup, type NavItem } from '@/lib/nav';
 import { cn } from '@/lib/utils';
 
 /** Which plan features are on. Exempt tenants (platform owner, demo) read every feature as on. */
@@ -24,7 +24,10 @@ export function useNavFeatures(): Record<NonNullable<NavItem['subFeature']>, boo
 /** The nav groups this user may see, from the projects service permissions. */
 export function useVisibleNav(): NavGroup[] {
   const { can, isPlatformOwner } = useServicePermissions();
-  return visibleNav({ can, isPlatformOwner });
+  const time_tracking = useFeature('time_tracking');
+  const attendance = useFeature('attendance');
+  const on: Record<HiddenFeature, boolean> = { time_tracking, attendance };
+  return visibleNav({ can, isPlatformOwner, hasFeature: (f) => on[f] });
 }
 
 function ItemLink({

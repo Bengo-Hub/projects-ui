@@ -1,4 +1,4 @@
-import { ClipboardCheck, FileText, FolderKanban, KeyRound, LayoutDashboard, ListTodo, PieChart, ShieldCheck, type LucideIcon } from 'lucide-react';
+import { ClipboardCheck, Clock, FileText, FolderKanban, KeyRound, LayoutDashboard, ListTodo, PieChart, ShieldCheck, type LucideIcon } from 'lucide-react';
 import { PERMS } from '@/lib/auth/permissions';
 
 export interface NavItem {
@@ -10,6 +10,8 @@ export interface NavItem {
   shortLabel?: string;
   /** Subscription feature code: shows an upgrade lock when the tenant's plan lacks it. */
   subFeature?: 'project_management' | 'budget_tracking' | 'task_tracking';
+  /** Plan features that must all be on, else the item is hidden rather than locked. */
+  requiresFeatures?: readonly HiddenFeature[];
   /** Hidden unless the user holds one of these projects permissions (service auth/me). */
   permission?: readonly string[];
   /** Platform owner only. */
@@ -17,6 +19,12 @@ export interface NavItem {
   /** Shown in the phone bottom bar. */
   bottomNav?: boolean;
 }
+
+/**
+ * Features that hide an item when off. Time needs ERP's attendance too, since the hours land on
+ * ERP timesheets; a lock there would promise something the projects plan alone cannot open.
+ */
+export type HiddenFeature = 'time_tracking' | 'attendance';
 
 export interface NavGroup {
   label: string;
@@ -30,6 +38,8 @@ export const NAV: NavGroup[] = [
       { label: 'Dashboard', shortLabel: 'Home', path: '/dashboard', icon: LayoutDashboard, bottomNav: true },
       { label: 'My work', path: '/my-work', icon: ListTodo, subFeature: 'task_tracking', permission: [PERMS.tasksView, PERMS.tasksViewOwn], bottomNav: true },
       { label: 'Projects', path: '/projects', icon: FolderKanban, subFeature: 'project_management', permission: [PERMS.projectsView], bottomNav: true },
+      // Before Portfolio: the phone bar holds four tabs, so with Time on it Portfolio moves to More.
+      { label: 'Time', path: '/time', icon: Clock, requiresFeatures: ['time_tracking', 'attendance'], permission: [PERMS.timeViewOwn], bottomNav: true },
       { label: 'Portfolio', path: '/portfolio', icon: PieChart, subFeature: 'budget_tracking', permission: [PERMS.financialsView], bottomNav: true },
     ],
   },
@@ -55,9 +65,15 @@ export interface NavAccess {
   /** Whether the user holds any of the codes (implications and bypass included). */
   can: (codes: readonly string[]) => boolean;
   isPlatformOwner: boolean;
+  /** Whether a plan feature is on; items with requiresFeatures stay hidden without it. */
+  hasFeature?: (code: HiddenFeature) => boolean;
 }
 
+/** The phone bar's tabs at most (four and More fit 390 px). */
+export const BOTTOM_NAV_MAX = 4;
+
 export function itemVisible(item: NavItem, access: NavAccess): boolean {
+  if (item.requiresFeatures && !item.requiresFeatures.every((f) => access.hasFeature?.(f) ?? false)) return false;
   if (item.permission && !access.can(item.permission)) return false;
   if (item.platformOnly && !access.isPlatformOwner) return false;
   return true;
