@@ -300,3 +300,148 @@ export const ROLE_NAMES: Record<string, string> = {
 export function roleName(code: string): string {
   return ROLE_NAMES[code] ?? code;
 }
+
+// Team and roles screens (sprint 17). The API enforces every rule below; these helpers only keep
+// the screens from offering what it would refuse.
+
+/** projects_admin always holds every code and client is the portal's role: both are read only. */
+export const RESERVED_ROLES: readonly string[] = ['projects_admin', 'client'];
+
+export function isReservedRole(code: string): boolean {
+  return RESERVED_ROLES.includes(code);
+}
+
+/** What the permission editor says next to a code with a consequence beyond its name. */
+export const PERMISSION_NOTES: Partial<Record<PermissionCode, string>> = {
+  'projects.projects.manage':
+    'Lifts project membership: the person sees and changes every project, not only the ones they belong to. Only an administrator can give a role with it.',
+  'projects.rbac.manage': 'Opens Team and Roles. Changing roles still needs an administrator.',
+  'projects.portal.view': 'Client portal only. A role with it cannot hold any staff permission.',
+};
+
+/**
+ * The selected code that grants code through implication (the module's manage, the full form of an
+ * _own code, QA's run for QA view), or null. The editor shows such a code ticked and locked.
+ */
+export function lockedBy(code: string, selected: readonly string[]): string | null {
+  for (const i of impliers(code)) {
+    if (selected.includes(i)) return i;
+  }
+  return null;
+}
+
+/** Why a permission set cannot be saved, or null: the portal never sits beside staff codes. */
+export function permissionSetProblem(codes: readonly string[]): string | null {
+  if (codes.includes(PERMS.portalView) && codes.length > 1) {
+    return 'Client portal access cannot sit beside staff permissions. Untick one or the other.';
+  }
+  return null;
+}
+
+/** A role's badge: a default role, the firm's customised copy of one, or the firm's own role. */
+export function roleKind(role: { scope: string; is_customized: boolean; is_system_role?: boolean }): 'Default' | 'Customised' | 'Your role' {
+  if (role.is_customized) return 'Customised';
+  return role.scope === 'global' ? 'Default' : 'Your role';
+}
+
+/** Only the firm's own roles can be deleted (a customised default goes back to the default). */
+export function roleDeletable(role: { scope: string; is_system_role: boolean; code: string }): boolean {
+  return role.scope === 'tenant' && !role.is_system_role && !isReservedRole(role.code);
+}
+
+/** Groups registry entries by module in registry order, for the editor. */
+export function groupByModule<T extends { module: string }>(perms: readonly T[]): { module: string; perms: T[] }[] {
+  const out: { module: string; perms: T[] }[] = [];
+  for (const p of perms) {
+    const g = out.find((x) => x.module === p.module);
+    if (g) g.perms.push(p);
+    else out.push({ module: p.module, perms: [p] });
+  }
+  return out;
+}
+
+const MODULE_TITLES: Record<string, string> = {
+  rbac: 'Team and roles',
+  qa: 'QA and acceptance',
+  change_requests: 'Change requests',
+  change_approvals: 'Change approvals',
+};
+
+export function moduleTitle(module: string): string {
+  const t = MODULE_TITLES[module];
+  if (t) return t;
+  const s = module.replace(/_/g, ' ');
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** The end of the chosen day (local time) as an ISO time, or null for no end date. */
+export function endOfDayISO(date: string): string | null {
+  return date ? new Date(`${date}T23:59:59`).toISOString() : null;
+}
+
+/** Where a held role stands now. */
+export function assignmentState(a: { expires_at: string | null; expired: boolean }, now = Date.now()): 'running' | 'ending' | 'ended' {
+  if (a.expired || (a.expires_at && new Date(a.expires_at).getTime() <= now)) return 'ended';
+  return a.expires_at ? 'ending' : 'running';
+}
+
+/**
+ * The roles a person can be given: never client, never one they already hold and that is still
+ * running (an ended one can be given again), projects_admin only for an administrator.
+ */
+export function assignableRoles<T extends { code: string }>(
+  roles: readonly T[],
+  held: readonly { role_code: string; expired: boolean }[],
+  adminTier: boolean,
+): T[] {
+  const running = new Set(held.filter((a) => !a.expired).map((a) => a.role_code));
+  return roles.filter((r) => r.code !== 'client' && !running.has(r.code) && (adminTier || r.code !== 'projects_admin'));
+}
+
+/**
+ * Whether the caller is an administrator for role changes, as projects-api's admin tier: platform
+ * owner, superuser or admin global role, or the projects_admin role.
+ */
+export function isAdminTier(p: { is_platform_owner?: boolean; global_roles?: string[]; roles?: string[] } | null | undefined, bypass = false): boolean {
+  if (!p) return bypass;
+  if (bypass || p.is_platform_owner) return true;
+  const global = (p.global_roles ?? []).map((g) => g.trim().toLowerCase());
+  if (global.includes('admin') || global.includes('superuser')) return true;
+  return (p.roles ?? []).includes('projects_admin');
+}
+
+const AUDIT_LABELS: Record<string, string> = {
+  'role.created': 'Created a role',
+  'role.cloned': 'Copied a role',
+  'role.customized': 'Customised a default role',
+  'role.updated': 'Renamed a role',
+  'role.deleted': 'Deleted a role',
+  'role.permissions_updated': 'Changed permissions',
+  'role.assigned': 'Gave a role',
+  'role.revoked': 'Took a role away',
+  'user.invited': 'Invited a person',
+  'user.deactivated': 'Deactivated a person',
+  'user.reactivated': 'Reactivated a person',
+};
+
+export function auditLabel(action: string): string {
+  return AUDIT_LABELS[action] ?? action;
+}
+
+/** The role or person a change was about, read from its own details. */
+export function auditSubject(changes: Record<string, unknown> | null | undefined): string {
+  if (!changes) return '';
+  const pick = (k: string) => (typeof changes[k] === 'string' ? (changes[k] as string) : '');
+  return pick('name') || pick('email') || (pick('role_code') ? roleName(pick('role_code')) : '') || pick('status');
+}
+
+/**
+ * A project team member's label (projects-api members.Roles): owner and manager lead the project and
+ * hear about a client's milestone decisions. What anyone may do comes from their projects role.
+ */
+export const PROJECT_MEMBER_ROLES: readonly { value: string; label: string; description: string }[] = [
+  { value: 'owner', label: 'Owner', description: 'Leads the project; told about client decisions' },
+  { value: 'manager', label: 'Manager', description: 'Runs the project day to day; told about client decisions' },
+  { value: 'member', label: 'Member', description: 'Works on the project' },
+  { value: 'viewer', label: 'Viewer', description: 'Follows the project' },
+];

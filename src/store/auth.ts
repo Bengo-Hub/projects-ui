@@ -4,6 +4,7 @@ import {
   buildLogoutUrl,
   exchangeCodeForTokens,
   fetchProfile,
+  revokeServerSession,
   type UserProfile,
 } from '@/lib/auth/api';
 import {
@@ -171,8 +172,20 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: async () => {
-        // SSO guide step 8: reset the store, clear the saved session and tenant keys and the tab's
-        // sessionStorage, then let auth-api end the SSO session and send the user back here.
+        // SSO guide step 8. The firm comes first: the path's first segment (every tenant page is
+        // /{orgSlug}/...), else the signed-in profile, so signing in again lands on the same
+        // organisation. Then the SSO session is revoked on auth-api while the token is still known,
+        // the store, the saved session, the tenant keys and the tab's sessionStorage are cleared,
+        // and auth-api's logout sends the user back to the firm's own page. The client portal has
+        // its own sign out (store/portal-auth.ts).
+        let slug = '';
+        if (typeof window !== 'undefined') {
+          const first = window.location.pathname.split('/').filter(Boolean)[0] ?? '';
+          if (first && first !== 'auth') slug = first;
+        }
+        slug = slug || get().user?.tenant_slug || '';
+        await revokeServerSession(get().session?.accessToken);
+
         set({ status: 'idle', user: null, session: null, lastAuthenticatedAt: null });
         apiClient.setAccessToken(null);
         apiClient.setTenantInfo(null, null);
@@ -182,7 +195,7 @@ export const useAuthStore = create<AuthState>()(
             try { localStorage.removeItem(key); } catch { /* storage blocked */ }
           }
           try { sessionStorage.clear(); } catch { /* storage blocked */ }
-          window.location.href = buildLogoutUrl(window.location.origin);
+          window.location.href = buildLogoutUrl(slug ? `${window.location.origin}/${slug}` : window.location.origin);
         }
       },
 

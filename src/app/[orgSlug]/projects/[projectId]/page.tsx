@@ -19,6 +19,7 @@ import { CountRow } from '@/components/common/list-parts';
 import { RichTextView } from '@/components/common/rich-text';
 import { ProjectNotFound } from '@/components/common/not-found-state';
 import { useServicePermissions } from '@/hooks/usePermissions';
+import { Can } from '@/components/auth/can';
 import { isNotFound } from '@/lib/api/errors';
 import { PERMS } from '@/lib/auth/permissions';
 
@@ -115,12 +116,12 @@ export default function ProjectDetailPage() {
         actions={
           <>
             <Badge status={project.status} />
-            {can(PERMS.templatesAdd) && (
+            <Can permission={PERMS.templatesAdd}>
               <Button variant="outline" className="h-11 sm:h-8 sm:px-3 sm:text-xs" onClick={() => setSavingTemplate(true)}>
                 <LayoutTemplate className="h-4 w-4" aria-hidden />
                 Save as template
               </Button>
-            )}
+            </Can>
           </>
         }
         className="mb-0"

@@ -414,6 +414,49 @@ node tests, build and Playwright run come next, in one batch on the shared build
   repeat rule and its refusal; a blocked drag, a 422 drag, the drawer status menu, saving status
   rules and an automation; the plan locks for workload, Gantt and automation; read-only roles).
 
+### Sprint 17: Access management (UI built and tested 2026-11-17)
+
+I adopted treasury's team and roles screens and pos's sign-in hardening, against projects-api's
+sprint 17 routes (`projects-api/docs/api.md`, "Team, roles and access"). Owner decisions: people
+are invited here through auth-api, not in the accounts site; no per person permission overrides;
+no idle logout. Type check, lint, node tests (95), build and the full Playwright run (201 passed,
+5 existing skips, phone and desktop) are green.
+
+- [x] **Sign in and sign out (US-17.6).** The callback checks the PKCE `state` and shows
+  shared-ui-lib's `SSOCallbackError` (a mismatch never reaches the token exchange). Sign out keeps
+  the firm's slug, revokes the SSO session on auth-api (`revokeServerSession`, wrapped in
+  `lib/auth/api.ts`), clears the store and storage, and returns to `/{slug}`. The client portal's
+  sign out is unchanged.
+- [x] **Fresh permissions.** `useServicePermissions` reads the service profile again every 60
+  seconds and on focus, so a role change reaches open tabs within a minute.
+- [x] **`<Can>`** (`components/auth/can.tsx`) gates an element on `permission` or `any`, through
+  `useServicePermissions`. Swapped in where it was a clean swap (Save as template); the other
+  checks compute values rather than gate markup and stay as they are.
+- [x] **Team (US-17.1).** `/{org}/settings/team`, "Team" beside "Roles and access" in Settings
+  (`rbac.manage`). Server search and paging; each person with their running roles (a role with an
+  end date shows "until"), Active or Deactivated, last seen. Invite person (admin tier): email and a
+  role, through `POST /users`. Roles: the roles held (automatic ones explained, ended ones marked),
+  give a role with an optional end date (end of that day), take one away (admin tier). Deactivate
+  and reactivate with a confirm (admin tier); never oneself.
+- [x] **Roles (US-17.2, 17.3).** `/{org}/settings/roles` rebuilt: the role list with Default,
+  Customised and Your role badges, "You hold this", holders, Copy and Delete (the firm's own roles
+  only; the API's refusal for a held role is shown). The permission editor groups codes by module;
+  a code granted by a ticked manage (or full form) is ticked and locked "via manage"; "Manage every
+  project" is labelled with what it lifts; the portal never mixes with staff codes. Editing a
+  default role says the first save makes the firm's copy, and the selection follows the code
+  across the new id. projects_admin and client are read only, and without admin tier the editor is
+  read only. New role, Copy and Rename dialogs. Role changes list from the audit log.
+- [x] **Project team (US-17.7).** Add member picks from the organisation's staff by name or email
+  (`GET /people`, never portal clients, current members left out), with the project roles the API
+  accepts (owner, manager, member, viewer).
+- [x] Tests: `node-tests/access.test.ts` (locked codes, the portal rule, badges and delete rules,
+  module groups, end dates and role states, assignable roles, admin tier, audit wording, member
+  roles) and `e2e/team-roles.spec.ts` with `e2e/access-mocks.ts` at phone and desktop (invite,
+  give a role with an end date, deactivate, no admin actions without admin tier, create and copy
+  a role, a held role refused on delete, the copy on write of a default role, locked codes and the
+  read only administrator role, the project team people picker, sign out revoking the SSO
+  session, the callback state mismatch, `<Can>`, the Team menu entry).
+
 ### Sprint 1: Foundation & SSO
 - [x] Project scaffolding with Next.js 15.
 - [x] SSO integration with `auth-ui`.

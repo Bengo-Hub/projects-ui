@@ -1,4 +1,4 @@
-import { ClipboardCheck, Clock, FileText, FolderKanban, KeyRound, LayoutDashboard, ListTodo, PieChart, ShieldCheck, Stamp, Users, type LucideIcon } from 'lucide-react';
+import { ClipboardCheck, Clock, FileText, FolderKanban, KeyRound, LayoutDashboard, ListTodo, PieChart, ShieldCheck, Stamp, Users, UsersRound, type LucideIcon } from 'lucide-react';
 import { PERMS } from '@/lib/auth/permissions';
 
 export interface NavItem {
@@ -56,7 +56,10 @@ export const NAV: NavGroup[] = [
   },
   {
     label: 'Settings',
-    items: [{ label: 'Roles and access', path: '/settings/roles', icon: ShieldCheck, permission: [PERMS.rbacManage] }],
+    items: [
+      { label: 'Team', path: '/settings/team', icon: UsersRound, permission: [PERMS.rbacManage] },
+      { label: 'Roles and access', path: '/settings/roles', icon: ShieldCheck, permission: [PERMS.rbacManage] },
+    ],
   },
   {
     label: 'Platform',

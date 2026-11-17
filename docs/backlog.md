@@ -15,8 +15,20 @@
 
 Done: the service auth/me profile with the 404 fallback, the permission registry and its node tests, nav, page guards and buttons on service codes, the 403 split (unauthorized page, permission toast, upgrade toast), the project not-found state, paged tasks, the new task detail and Gantt shapes, Settings, Roles and access, tenant branding by slug and the step 8 sign out. Still open:
 
-- Adding a person to the organisation from Roles and access (`POST /users`). I left it out until I decide how it sits beside the accounts site invite; today the page links to the accounts site.
-- Adding a team member and committees still take a raw user id. They should pick people from `GET /rbac/users` with the shared SearchableCombobox. The team list itself now shows names.
+- ~~Adding a person to the organisation from Roles and access.~~ Done in sprint 17: Team invites by email through auth-api; the accounts site link is gone.
+- ~~Adding a team member takes a raw user id.~~ Done in sprint 17: a people search (`GET /people`). Committees still take a raw user id; move them to the same picker.
+
+### Access management, sprint 17 (written 2026-11-17)
+
+Done: Team page, roles page with the permission editor, sign in state check, SSO session revoke on
+sign out, permission refresh, `<Can>`, the project team people picker (`docs/plan.md`, Sprint 17).
+Still open:
+
+- The client portal callback does not check the PKCE `state` yet (its `portal_` namespace is ready
+  in `lib/auth/pkce.ts`); I left the portal's sign-in untouched in this sprint.
+- `<Can>` is in one place; the other checks compute flags (columns, tabs, enabled queries) and move
+  only where it is a clean swap.
+- A person's detail page (`GET /rbac/users/{id}` with effective permissions) has no screen yet.
 - The tenders list loads one page of 20; it needs Show more like tasks.
 
 ## Security

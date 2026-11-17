@@ -1,3 +1,5 @@
+import { revokeServerSession as sharedRevokeServerSession } from '@bengo-hub/shared-ui-lib/auth';
+
 const SSO_BASE_URL = process.env.NEXT_PUBLIC_SSO_URL || 'https://sso.codevertexafrica.com';
 const SSO_CLIENT_ID = process.env.NEXT_PUBLIC_SSO_CLIENT_ID || 'projects-ui';
 /** The client portal's own OAuth client (auth-api cmd/seed): self sign-up joins as client. */
@@ -44,6 +46,14 @@ export function buildLogoutUrl(postLogoutRedirectUri?: string): string {
     url.searchParams.set('post_logout_redirect_uri', postLogoutRedirectUri);
   }
   return url.toString();
+}
+
+/**
+ * Ends the SSO session on auth-api (its session keys and the cookie) while the access token is
+ * still known. Best effort and never throws: sign out goes on whatever the answer.
+ */
+export async function revokeServerSession(accessToken?: string | null): Promise<void> {
+  return sharedRevokeServerSession(SSO_BASE_URL, accessToken);
 }
 
 export async function exchangeCodeForTokens(params: TokenExchangeParams) {

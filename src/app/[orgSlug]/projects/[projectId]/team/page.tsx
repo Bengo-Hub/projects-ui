@@ -14,74 +14,96 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/common/page-header';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { ProjectNotFound } from '@/components/common/not-found-state';
+import { QADialog } from '@/components/qa/qa-dialog';
 import { useServicePermissions } from '@/hooks/usePermissions';
+import { useStaffPeople } from '@/hooks/useRbac';
 import { isNotFound } from '@/lib/api/errors';
-import { PERMS } from '@/lib/auth/permissions';
+import { PERMS, PROJECT_MEMBER_ROLES } from '@/lib/auth/permissions';
 import type { AddMemberInput } from '@/lib/api/members';
+import { rbacApi, type PickPerson } from '@/lib/api/rbac';
 import type { ProjectMember } from '@/types';
 
-const ROLE_OPTIONS: ComboboxOption[] = [
-  { value: 'owner', label: 'Owner' },
-  { value: 'manager', label: 'Manager' },
-  { value: 'member', label: 'Member' },
-  { value: 'viewer', label: 'Viewer' },
-];
+const ROLE_OPTIONS: ComboboxOption[] = PROJECT_MEMBER_ROLES.map((r) => ({ value: r.value, label: r.label, description: r.description }));
 
-function AddMemberModal({
+function personOption(p: PickPerson): ComboboxOption {
+  return { value: p.user_id, label: p.name || p.email || 'Not signed in yet', description: p.name && p.email ? p.email : undefined };
+}
+
+/**
+ * Adds a teammate to the project: picked from the organisation's staff by name or email (never a
+ * raw id, never a portal client), with a project role the API accepts.
+ */
+function AddMemberDialog({
+  orgSlug,
+  open,
+  existing,
   onClose,
   onSubmit,
   isPending,
 }: {
+  orgSlug: string;
+  open: boolean;
+  existing: readonly string[];
   onClose: () => void;
   onSubmit: (data: AddMemberInput) => void;
   isPending: boolean;
 }) {
   const [form, setForm] = useState<AddMemberInput>({ user_id: '', role_code: 'member' });
+  const staff = useStaffPeople(orgSlug, open);
+  const options = useMemo(
+    () => (staff.data ?? []).filter((p) => !existing.includes(p.user_id)).map(personOption),
+    [staff.data, existing],
+  );
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.user_id.trim()) return;
-    onSubmit(form);
+  function close() {
+    setForm({ user_id: '', role_code: 'member' });
+    onClose();
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
-      <div className="max-h-[92dvh] w-full max-w-sm overflow-y-auto rounded-t-xl bg-card p-4 shadow-lg sm:mx-4 sm:rounded-xl sm:p-6">
-        <h2 className="mb-4 text-lg font-semibold">Add member</h2>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label htmlFor="member-user" className="mb-1 block text-sm font-medium">User ID *</label>
-            <input
-              id="member-user"
-              type="text"
-              value={form.user_id}
-              onChange={(e) => setForm((f) => ({ ...f, user_id: e.target.value }))}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-base focus:outline-none focus:ring-1 focus:ring-ring sm:text-sm"
-              placeholder="User ID"
-              required
-            />
-          </div>
-          <div>
-            <span className="mb-1 block text-sm font-medium">Role</span>
-            <SearchableCombobox
-              options={ROLE_OPTIONS}
-              value={form.role_code}
-              onChange={(v) => setForm((f) => ({ ...f, role_code: v || 'member' }))}
-              clearable={false}
-              searchPlaceholder="Find a role"
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isPending}>
-              Cancel
-            </Button>
-            <Button type="submit" size="sm" disabled={isPending || !form.user_id.trim()}>
-              {isPending ? 'Adding...' : 'Add member'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <QADialog open={open} onOpenChange={(o) => !o && close()} title="Add member" description="Pick someone from your organisation. Invite new people from Team.">
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (form.user_id) onSubmit(form);
+        }}
+      >
+        <div>
+          <span className="mb-1 block text-sm font-medium">Person</span>
+          <SearchableCombobox
+            options={options}
+            value={form.user_id}
+            onChange={(v) => setForm((f) => ({ ...f, user_id: v }))}
+            onRemoteSearch={async (q) =>
+              (await rbacApi.people(orgSlug, q)).filter((p) => !existing.includes(p.user_id)).map(personOption)
+            }
+            loading={staff.isLoading}
+            placeholder="Choose a person"
+            searchPlaceholder="Search by name or email"
+            emptyText="Nobody matches. Invite them from Team first."
+          />
+        </div>
+        <div>
+          <span className="mb-1 block text-sm font-medium">Project role</span>
+          <SearchableCombobox
+            options={ROLE_OPTIONS}
+            value={form.role_code}
+            onChange={(v) => setForm((f) => ({ ...f, role_code: v || 'member' }))}
+            clearable={false}
+            searchPlaceholder="Find a role"
+          />
+        </div>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" onClick={close} disabled={isPending}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isPending || !form.user_id}>
+            {isPending ? 'Adding...' : 'Add member'}
+          </Button>
+        </div>
+      </form>
+    </QADialog>
   );
 }
 
@@ -98,7 +120,8 @@ export default function TeamPage() {
   const { can } = useServicePermissions();
   const canManage = can(PERMS.membersManage);
 
-  const members = data?.data ?? [];
+  const members = useMemo(() => data?.data ?? [], [data]);
+  const memberIds = useMemo(() => members.filter((m) => !m.left_at).map((m) => m.user_id), [members]);
 
   const columns = useMemo<DataTableColumn<ProjectMember>[]>(() => {
     const base: DataTableColumn<ProjectMember>[] = [
@@ -185,7 +208,16 @@ export default function TeamPage() {
         <DataTable columns={columns} rows={members} rowKey={(m) => m.id} gridLines="rows" storageKey="projects-team-columns" />
       )}
 
-      {showAdd && <AddMemberModal onClose={() => setShowAdd(false)} onSubmit={handleAdd} isPending={addMember.isPending} />}
+      {canManage && (
+        <AddMemberDialog
+          orgSlug={orgSlug}
+          open={showAdd}
+          existing={memberIds}
+          onClose={() => setShowAdd(false)}
+          onSubmit={handleAdd}
+          isPending={addMember.isPending}
+        />
+      )}
 
       <ConfirmDialog
         open={!!removing}

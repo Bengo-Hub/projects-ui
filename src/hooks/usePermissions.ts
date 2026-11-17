@@ -9,6 +9,8 @@ import { holdsAny, inferProfile, type PermissionSubject, type ServiceProfile } f
 import { useAuthStore } from '@/store/auth';
 
 const STALE_MS = 5 * 60 * 1000;
+/** How often the profile is read again; focus reads it again once it is this old. */
+const REFRESH_MS = 60_000;
 
 export const SERVICE_ME_KEY = 'service-me';
 
@@ -37,8 +39,12 @@ export function useServicePermissions() {
       }
     },
     enabled,
-    staleTime: STALE_MS,
+    staleTime: REFRESH_MS,
     gcTime: STALE_MS * 2,
+    // A role change made by an admin reaches an open tab within a minute, and at once when the tab
+    // regains focus (the API's own cache lives 60 seconds too).
+    refetchInterval: REFRESH_MS,
+    refetchOnWindowFocus: true,
     retry: (failureCount, err) => {
       const s = httpStatusOf(err);
       if (s === 401 || s === 403 || s === 404) return false;
