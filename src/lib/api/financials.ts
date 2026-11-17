@@ -74,16 +74,20 @@ export interface ProjectFinancials {
   commercial: Commercial;
 }
 
-export type BillingType = 'fixed' | 'time_and_materials' | 'non_billable';
+export type BillingType = 'fixed' | 'time_and_materials' | 'retainer' | 'non_billable';
 
 /**
  * The contract side. Fixed price: margin at completion (contract value less the forecast at
- * completion) and unbilled. Time and materials: margin to date (invoiced less cost).
+ * completion) and unbilled. Time and materials and retainer: margin to date (invoiced less cost).
+ * Cost to date is treasury's booked cost plus ERP labour cost.
  */
 export interface Commercial {
   billing_type?: BillingType;
   contract_value?: number;
   invoiced: number;
+  labour_cost?: number;
+  cost_to_date?: number;
+  margin_to_date?: number;
   unbilled?: number;
   projected_margin?: number;
   projected_margin_pct?: number;
@@ -99,6 +103,31 @@ export interface ProjectHours {
   logged: number;
   pending: number;
   utilisation_pct: number | null;
+  /** Approved billable hours not yet on an invoice. */
+  unbilled_billable?: number;
+}
+
+/** GET /financials/clients row: every project of one client added up. */
+export interface ClientProfit {
+  client_id: string;
+  client_name: string;
+  currency: string;
+  projects: number;
+  contract_value: number;
+  invoiced: number;
+  unbilled: number;
+  labour_cost: number;
+  cost_to_date: number;
+  margin_to_date: number;
+  margin_pct?: number;
+}
+
+export interface ClientsRollup {
+  clients: ClientProfit[];
+  /** More projects than the rollup reads; the figures cover the first ones only. */
+  truncated: boolean;
+  /** Treasury did not answer, so invoiced and cost exclude its figures. */
+  money_unavailable: boolean;
 }
 
 export interface Paginated<T> {
@@ -119,4 +148,6 @@ export const financialsApi = {
     apiClient.get<ProjectFinancials>(`${base(orgSlug)}/projects/${projectId}`),
   portfolio: (orgSlug: string, params?: PortfolioParams) =>
     apiClient.get<Paginated<ProjectFinancials>>(`${base(orgSlug)}/portfolio`, params as Record<string, unknown>),
+  clients: (orgSlug: string, status?: string) =>
+    apiClient.get<ClientsRollup>(`${base(orgSlug)}/clients`, status ? { status } : undefined),
 };

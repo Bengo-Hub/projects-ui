@@ -141,7 +141,7 @@ export async function mockPortalApi(page: Page, s: PortalState) {
   await page.route(new RegExp(`${p}/files(\\?.*)?$`), (r) =>
     json(r, page1([{ id: 'f1', file_name: 'site-plan.pdf', file_size: 204800, mime_type: 'application/pdf', uploaded_at: '2026-11-15T08:00:00Z', task_id: null, url: 'https://storage.example.test/signed/site-plan.pdf' }])),
   );
-  await page.route(new RegExp(`${p}/invoices$`), (r) => json(r, { data: [], available: false, note: 'Invoices will appear here once billing is connected to the portal.' }));
+  await page.route(new RegExp(`${p}/invoices(\\?.*)?$`), (r) => json(r, { data: [], total: 0, page: 1, limit: 20, hasMore: false, available: false, note: 'Invoices will appear here once billing is connected to the portal.' }));
   await page.route(new RegExp(`${p}/thread(\\?.*)?$`), (r) => {
     if (r.request().method() !== 'POST') return json(r, page1(s.thread));
     const body = r.request().postDataJSON() as Record<string, unknown>;

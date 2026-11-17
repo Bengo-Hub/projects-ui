@@ -69,6 +69,8 @@ export function useUpdateProject(orgSlug: string) {
       void qc.invalidateQueries({ queryKey: [KEY, orgSlug, id] });
       // Commercial terms feed the financials view.
       void qc.invalidateQueries({ queryKey: ['financials', orgSlug] });
+      // And the billing tab's terms (sprint 15).
+      void qc.invalidateQueries({ queryKey: ['billing', orgSlug, id] });
       toast.success('Project updated');
     },
     onError: onMutationError('Failed to update project'),

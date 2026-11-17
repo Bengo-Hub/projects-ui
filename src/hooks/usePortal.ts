@@ -85,14 +85,27 @@ export function usePortalFiles(orgSlug: string, projectId: string) {
   return usePaged(orgSlug, projectId, 'files', (page) => portalApi.files(orgSlug, projectId, { limit: 20, page }), 10 * 60_000);
 }
 
+/**
+ * The project's sent and paid invoices, a page at a time. available and note come from the first
+ * page: available false means billing is not connected to the portal, not an error.
+ */
 export function usePortalInvoices(orgSlug: string, projectId: string) {
   const { userId, enabled } = useScope(orgSlug);
-  return useQuery({
+  const query = useInfiniteQuery({
     queryKey: [KEY, userId, orgSlug, projectId, 'invoices'],
-    queryFn: () => portalApi.invoices(orgSlug, projectId),
+    queryFn: ({ pageParam }) => portalApi.invoices(orgSlug, projectId, { limit: 20, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.hasMore ? (last.page ?? 1) + 1 : undefined),
     enabled: enabled && !!projectId,
     retry: noRetryOnRefusal,
   });
+  const first = query.data?.pages[0];
+  return {
+    ...query,
+    items: (query.data?.pages ?? []).flatMap((p) => p.data ?? []),
+    available: first?.available ?? false,
+    note: first?.note,
+  };
 }
 
 export function usePortalThread(orgSlug: string, projectId: string) {

@@ -14,6 +14,8 @@ export function ShareSwitch({
   describedBy,
   compact,
   className,
+  onText = 'Client can see',
+  offText = 'Team only',
 }: {
   checked: boolean;
   onChange: (next: boolean) => void;
@@ -23,6 +25,9 @@ export function ShareSwitch({
   /** Hides the state text on phones, for tight rows. */
   compact?: boolean;
   className?: string;
+  /** The state text, for a switch used outside client sharing. */
+  onText?: string;
+  offText?: string;
 }) {
   return (
     <button
@@ -52,7 +57,7 @@ export function ShareSwitch({
           )}
         />
       </span>
-      <span className={cn('whitespace-nowrap text-muted-foreground', compact && 'hidden sm:inline')}>{checked ? 'Client can see' : 'Team only'}</span>
+      <span className={cn('whitespace-nowrap text-muted-foreground', compact && 'hidden sm:inline')}>{checked ? onText : offText}</span>
     </button>
   );
 }

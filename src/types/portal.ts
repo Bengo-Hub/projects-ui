@@ -86,8 +86,31 @@ export interface PortalFile {
   url: string;
 }
 
+/** A project invoice as the client sees it: sent or paid only, never a draft. */
+export interface PortalInvoice {
+  id: string;
+  invoice_number: string;
+  status: string;
+  payment_status: string;
+  currency: string;
+  /** Numbers or decimal strings; read with moneyOf. */
+  total_amount: number | string;
+  amount_paid: number | string;
+  amount_due: number | string;
+  invoice_date: string;
+  due_date: string;
+  is_overdue: boolean;
+  /** Treasury's public page, where the client can view and pay. */
+  public_url?: string;
+}
+
+/** GET /portal/projects/{id}/invoices. available is false while billing is not connected; note says why. */
 export interface PortalInvoices {
-  data: unknown[];
+  data: PortalInvoice[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
   available: boolean;
   note?: string;
 }

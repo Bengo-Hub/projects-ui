@@ -68,6 +68,11 @@ export default function ProjectDetailPage() {
       locked: !hasBudgetTracking,
       perm: PERMS.financialsView,
     },
+    // Billing (sprint 15) shows only with milestone_billing: the Milestones tab already carries
+    // the upgrade link for that feature.
+    ...(hasMilestoneBilling
+      ? [{ href: `/${orgSlug}/projects/${projectId}/billing`, label: 'Billing', perm: PERMS.billingView }]
+      : []),
     // Client portal (sprint 14): every Projects tier has client_portal, so a missing feature locks.
     {
       href: `/${orgSlug}/projects/${projectId}/clients`,

@@ -291,6 +291,49 @@ dependencies.
     dropped before, so the unverified email and 409 specs really run those cases. The staff
     fixture token gains `milestone_billing` so the milestones page renders.
 
+### Sprint 15: Billing and profitability (UI built 2026-11-17)
+
+I built the screens against the projects-api billing routes (`internal/http/handlers/billing.go`)
+and the client rollup (`GET /financials/clients`). Treasury owns every invoice; these screens create
+drafts through projects-api and link to treasury-ui's invoice page (`/{orgSlug}/invoices/{id}`).
+Waiting on the main session: type check, lint, `pnpm test`, build and Playwright.
+
+- [x] **Permissions.** `projects.billing.view` ("View project billing and invoices") and
+  `projects.billing.manage` ("Create project invoices") are in the UI registry; manage implies
+  view, and the project manager role holds manage, as in projects-api's roles.
+- [x] **Billing tab (US-15.1, 15.2, 15.3, 15.5).** A Billing tab on the project, shown with the
+  `milestone_billing` feature and `billing.view`, guarded by `RequirePermission`. It holds the
+  contract terms with a link to edit them on the Financials tab (and a note when there is no
+  client or the project is internal), the milestones in the shared DataTable (cards on phones)
+  with price, invoice number, and a paid, partly paid, overdue or void badge, Set price (a dialog
+  with a fixed amount or a share of the contract value) and Create invoice (`billing.manage`,
+  disabled without a price or a client). A created invoice toasts with "Open in treasury". Time
+  and materials projects get the unbilled hours and value and a from and to date pair (last month
+  by default) with Invoice time; a returned warning stays on the card. Retainer projects get a
+  month picker (this month by default). Then the latest invoices with date, due date, total,
+  amount due and status. Banners say when treasury or ERP is not answering. Without the feature
+  the page shows the plan lock and makes no billing call; a plan 403 shows the same lock. Errors
+  show the server's text, and nothing to bill is an information toast.
+- [x] **Milestones page (US-15.5).** Each invoiced milestone shows its invoice number, linked to
+  treasury, with the payment badge. The billing overview is only read when the tenant has the
+  feature and the user holds `billing.view`.
+- [x] **Contract card (US-15.3, 15.4).** Billing gains Monthly retainer with the monthly fee,
+  included hours and a rollover switch, and time and materials gains the hourly rate (both kept in
+  project metadata). The summary adds labour cost, cost to date, margin to date and the approved
+  hours not yet billed.
+- [x] **Portfolio by client (US-15.4).** A By project and By client switch on the portfolio. By
+  client lists each client's projects, contract value, invoiced, unbilled, labour cost, cost to
+  date and margin, in the API's order, with notes when the rollup was cut short or treasury did
+  not answer.
+- [x] **Portal invoices.** The client's Invoices tab lists the sent and paid invoices with date,
+  due date, total, amount due, a paid or overdue badge and "View and pay" to treasury's public
+  page. While billing is not connected it shows the API's note.
+- [x] Tests: `node-tests/billing.test.ts` (money parsing, default periods, price rules, the
+  invoice badge order, invoice blocks, error toasts, links, permissions) and, at phone and
+  desktop, `e2e/billing.spec.ts` with `e2e/billing-mocks.ts` (milestone invoice, price by percent,
+  time invoice with a warning, nothing to bill, retainer month, read only, the plan lock, the
+  client rollup and the portal list). `signIn` in `e2e/qa-mocks.ts` now takes the plan features.
+
 ### Sprint 1: Foundation & SSO
 - [x] Project scaffolding with Next.js 15.
 - [x] SSO integration with `auth-ui`.

@@ -59,8 +59,13 @@ Sprint 12 screens built 2026-11-16 (see plan.md, "Sprint 12"): task drawer, seve
 - Client portal: built 2026-11-17 (plan.md, "Sprint 14"). Still open:
   - Done 2026-11-17 with projects-api: the `X-Client-Invites` CORS header, the contact lookup for `portal.manage`, `last_decision` on the team's milestones, `author_kind` on thread entries and `progress` on the portal list (plan.md, "API follow-ups wired in").
   - Fixed 2026-11-17: a revoked client's older thread entries kept carrying the Team tag. projects-api now stores the author kind on each comment when it is posted, so the Client tag stays.
-  - Invoices read as a placeholder until treasury lists a project's invoices over S2S.
+  - Done 2026-11-17 (sprint 15): the portal's Invoices tab lists the sent and paid invoices with a "View and pay" link to treasury's public page.
   - Ready for review lives on the milestones page, which needs `milestone_billing`; a firm without it cannot send milestones for review from the UI yet.
-- Billing and profitability screens. Sprint 15.
+- Billing and profitability screens: built 2026-11-17 (plan.md, "Sprint 15"). Waiting on the main session's type check, lint, node tests, build and Playwright run. Still open:
+  - The Billing tab shows the latest invoices only, with a link to the full list in treasury; there is no paging on the tab.
+  - Retainer hours used against the allowance (and what rolls over) are not shown yet. projects-api does not send them.
+  - The client rollup on the portfolio is not paged and cannot open a client's projects; a client filter on the By project view would do it.
+  - The hourly rate is now set on the contract card, but there is no rate per person or per role.
+  - Voiding or sending an invoice is done in treasury; the tab links there and refreshes on its next load.
 - Workload, baselines, risks, change requests, templates, status rules. Sprint 16.
 - Project status reports. Source: plan.md Sprint 3. API sprint 7.

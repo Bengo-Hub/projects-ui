@@ -165,7 +165,13 @@ export default function ProjectFinancialsPage() {
         )}
       </dl>
 
-      <CommercialCard orgSlug={orgSlug} projectId={projectId} commercial={data.commercial ?? { invoiced: 0 }} currency={cur} />
+      <CommercialCard
+        orgSlug={orgSlug}
+        projectId={projectId}
+        commercial={data.commercial ?? { invoiced: 0 }}
+        currency={cur}
+        unbilledHours={data.hours?.unbilled_billable}
+      />
 
       <Card>
         <CardHeader>

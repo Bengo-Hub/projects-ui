@@ -101,7 +101,8 @@ export const portalApi = {
     portalHttp.get<PaginatedResponse<PortalTask>>(`${base(orgSlug)}/${enc(id)}/tasks`, { params }).then((r) => r.data),
   files: (orgSlug: string, id: string, params?: PageParams) =>
     portalHttp.get<PaginatedResponse<PortalFile>>(`${base(orgSlug)}/${enc(id)}/files`, { params }).then((r) => r.data),
-  invoices: (orgSlug: string, id: string) => portalHttp.get<PortalInvoices>(`${base(orgSlug)}/${enc(id)}/invoices`).then((r) => r.data),
+  invoices: (orgSlug: string, id: string, params?: PageParams) =>
+    portalHttp.get<PortalInvoices>(`${base(orgSlug)}/${enc(id)}/invoices`, { params }).then((r) => r.data),
   thread: (orgSlug: string, id: string, params?: PageParams) =>
     portalHttp.get<PaginatedResponse<ThreadComment>>(`${base(orgSlug)}/${enc(id)}/thread`, { params }).then((r) => r.data),
   post: (orgSlug: string, id: string, content: string, idempotencyKey: string) =>

@@ -14,6 +14,16 @@ export function useProjectFinancials(orgSlug: string, projectId: string, enabled
   });
 }
 
+/** Margin per client (GET /financials/clients), in the order the API ranks them. */
+export function useClientProfit(orgSlug: string, status?: string, enabled = true) {
+  return useQuery({
+    queryKey: [KEY, orgSlug, 'clients', status ?? ''],
+    queryFn: () => financialsApi.clients(orgSlug, status),
+    enabled: enabled && !!orgSlug,
+    staleTime: 60_000,
+  });
+}
+
 export function usePortfolio(orgSlug: string, params?: PortfolioParams, enabled = true) {
   return useQuery({
     queryKey: [KEY, orgSlug, 'portfolio', params],

@@ -24,6 +24,29 @@ import { ProjectNotFound } from '@/components/common/not-found-state';
 import { useServicePermissions } from '@/hooks/usePermissions';
 import { isNotFound } from '@/lib/api/errors';
 import { PERMS } from '@/lib/auth/permissions';
+import { useBillingOverview } from '@/hooks/useBilling';
+import { TREASURY_UI, type MilestoneBilling } from '@/lib/api/billing';
+import { treasuryInvoiceUrl } from '@/lib/billing/logic';
+import { InvoiceBadge } from '@/components/billing/invoice-badge';
+
+/** The milestone's invoice number (linked to treasury) and payment badge, once it is invoiced. */
+function MilestoneInvoice({ orgSlug, billing }: { orgSlug: string; billing?: MilestoneBilling }) {
+  if (!billing?.invoice_id) return null;
+  return (
+    <p className="mt-2 flex flex-wrap items-center gap-2 text-xs" data-testid="milestone-invoice">
+      <span className="text-muted-foreground">Invoice</span>
+      <a
+        href={treasuryInvoiceUrl(TREASURY_UI, orgSlug, billing.invoice_id)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-medium text-primary hover:underline"
+      >
+        {billing.invoice_number || 'Draft'}
+      </a>
+      {billing.invoice && <InvoiceBadge invoice={billing.invoice} />}
+    </p>
+  );
+}
 
 function CreateMilestoneModal({
   onClose,
@@ -108,6 +131,9 @@ export default function MilestonesPage() {
   const canAdd = can(PERMS.milestonesAdd);
   // Putting a milestone up for the client's review is a milestone edit that notifies the clients.
   const canSendForReview = hasClientPortal && can(PERMS.milestonesChange);
+  // Invoice state per milestone, only when the billing overview can be read: no request otherwise.
+  const billing = useBillingOverview(orgSlug, projectId, hasMilestoneBilling && can(PERMS.billingView));
+  const billed = new Map((billing.data?.milestones ?? []).filter((b) => b.invoice_id).map((b) => [b.id, b]));
 
   const milestones = (data?.data ?? []).sort((a, b) => {
     if (!a.target_date) return 1;
@@ -183,6 +209,7 @@ export default function MilestonesPage() {
                       {teamMilestoneLabel(m.status)}
                     </Badge>
                   </div>
+                  <MilestoneInvoice orgSlug={orgSlug} billing={billed.get(m.id)} />
                   {m.last_decision && <DecisionNote decision={m.last_decision} className="mt-2" />}
                   {canSendForReview && canMarkReady(m.status) && (
                     <div className="mt-3 flex justify-end">

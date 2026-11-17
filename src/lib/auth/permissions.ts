@@ -40,6 +40,9 @@ export const PERMS = {
   financialsView: 'projects.financials.view',
   financialsManage: 'projects.financials.manage',
 
+  billingView: 'projects.billing.view',
+  billingManage: 'projects.billing.manage',
+
   timeView: 'projects.time.view',
   timeViewOwn: 'projects.time.view_own',
   timeAdd: 'projects.time.add',
@@ -89,6 +92,8 @@ export const PERMISSION_NAMES: Record<PermissionCode, string> = {
   'projects.tenders.manage': 'Manage tenders, committees and evaluations',
   'projects.financials.view': 'View project financials',
   'projects.financials.manage': 'Manage project budgets',
+  'projects.billing.view': 'View project billing and invoices',
+  'projects.billing.manage': 'Create project invoices',
   'projects.time.view': 'View all time entries',
   'projects.time.view_own': 'View my time entries',
   'projects.time.add': 'Log time',
@@ -169,6 +174,7 @@ const PROJECT_MANAGER: string[] = [
   PERMS.membersView, PERMS.membersManage, PERMS.commentsView, PERMS.commentsAdd, PERMS.commentsManage,
   PERMS.tendersView, PERMS.tendersAdd, PERMS.tendersChange, PERMS.financialsView,
   PERMS.timeView, PERMS.timeAdd, PERMS.timeManage, PERMS.portalManage, PERMS.qaManage,
+  PERMS.billingManage,
 ];
 const MEMBER: string[] = [
   PERMS.projectsView, PERMS.tasksView, PERMS.tasksAdd, PERMS.tasksChangeOwn,

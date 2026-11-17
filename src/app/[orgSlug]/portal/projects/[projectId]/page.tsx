@@ -3,8 +3,10 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Download, FileText, Flag, ListChecks, MessageSquare, Receipt } from 'lucide-react';
-import { formatDate } from '@bengo-hub/shared-ui-lib/format';
+import { ArrowLeft, Download, ExternalLink, FileText, Flag, ListChecks, MessageSquare, Receipt } from 'lucide-react';
+import { formatCurrency, formatDate } from '@bengo-hub/shared-ui-lib/format';
+import { InvoiceBadge } from '@/components/billing/invoice-badge';
+import { moneyOf, safePayUrl } from '@/lib/billing/logic';
 import { useTenantBranding } from '@bengo-hub/shared-ui-lib/tenant';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -160,16 +162,69 @@ function Invoices({ orgSlug, projectId }: { orgSlug: string; projectId: string }
   if (q.isLoading) return <Skeleton rows={1} />;
   if (q.isError) return <LoadError what="The invoices" onRetry={() => void q.refetch()} />;
   // available:false is the API saying billing is not connected to the portal yet: not an error.
-  if (!q.data?.available || (q.data.data ?? []).length === 0) {
+  if (!q.available || q.items.length === 0) {
     return (
       <EmptyState
         icon={Receipt}
         title="Invoices will appear here"
-        description={q.data?.available ? 'There are no invoices on this project yet.' : 'Your invoices for this project will be listed here once billing is connected. Until then the firm sends them directly.'}
+        description={
+          q.available
+            ? 'There are no invoices on this project yet.'
+            : q.note || 'Your invoices for this project will be listed here once billing is connected. Until then the firm sends them directly.'
+        }
       />
     );
   }
-  return <p className="text-sm text-muted-foreground">{q.data.data.length} invoices</p>;
+  return (
+    <>
+      <ul className="divide-y divide-border rounded-lg border border-border bg-card">
+        {q.items.map((inv) => {
+          const pay = safePayUrl(inv.public_url);
+          const due = moneyOf(inv.amount_due);
+          return (
+            <li key={inv.id} className="space-y-2 p-4" data-testid="portal-invoice">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-medium">{inv.invoice_number || 'Invoice'}</p>
+                <InvoiceBadge invoice={inv} className="shrink-0" />
+              </div>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
+                <div>
+                  <dt className="text-muted-foreground">Date</dt>
+                  <dd>{inv.invoice_date ? formatDate(inv.invoice_date) : '-'}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Due</dt>
+                  <dd className={inv.is_overdue && due > 0 ? 'font-medium text-destructive' : undefined}>{inv.due_date ? formatDate(inv.due_date) : '-'}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Total</dt>
+                  <dd className="tabular-nums">{formatCurrency(moneyOf(inv.total_amount), inv.currency || 'KES')}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Amount due</dt>
+                  <dd className="font-semibold tabular-nums">{formatCurrency(due, inv.currency || 'KES')}</dd>
+                </div>
+              </dl>
+              {pay && (
+                <a
+                  href={pay}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-10 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-primary hover:bg-accent"
+                >
+                  {due > 0 ? 'View and pay' : 'View invoice'}
+                  <ExternalLink className="h-4 w-4" aria-hidden />
+                </a>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <div className="grid">
+        <ShowMore show={!!q.hasNextPage} loading={q.isFetchingNextPage} onClick={() => void q.fetchNextPage()} />
+      </div>
+    </>
+  );
 }
 
 function Messages({ orgSlug, projectId }: { orgSlug: string; projectId: string }) {

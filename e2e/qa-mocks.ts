@@ -118,10 +118,12 @@ const b64url = (s: string) => Buffer.from(s).toString('base64').replace(/=+$/, '
  * carries an active Projects subscription; without them a tenant reads as unsubscribed and the
  * subscription overlay covers every page.
  */
-function fixtureToken(): string {
+export const STAFF_FEATURES = ['project_management', 'task_tracking', 'team_collaboration', 'time_tracking', 'attendance', 'client_portal', 'budget_tracking', 'gantt_chart', 'milestone_billing'];
+
+function fixtureToken(features: string[] = STAFF_FEATURES): string {
   const claims = {
     subscription_status: 'ACTIVE',
-    subscription_features: ['project_management', 'task_tracking', 'team_collaboration', 'time_tracking', 'attendance', 'client_portal', 'budget_tracking', 'gantt_chart', 'milestone_billing'],
+    subscription_features: features,
     active_service_tags: ['projects'],
   };
   return `${b64url('{"alg":"none"}')}.${b64url(JSON.stringify(claims))}.e2e`; // secret-scan:allow (unsigned fixture token for the mocked SSO session)
@@ -131,7 +133,7 @@ function fixtureToken(): string {
  * A saved sign-in in the shape the zustand auth store persists, so no SSO round trip happens. The
  * SSO identity carries global roles only; projects permissions come from the service auth/me.
  */
-export async function signIn(context: BrowserContext, baseURL: string) {
+export async function signIn(context: BrowserContext, baseURL: string, features: string[] = STAFF_FEATURES) {
   const user = {
     id: '44444444-4444-4444-8444-444444444444',
     email: 'owner@acme.test',
@@ -143,7 +145,7 @@ export async function signIn(context: BrowserContext, baseURL: string) {
     isPlatformOwner: false,
     isSuperUser: false,
   };
-  const state = { state: { session: { accessToken: fixtureToken(), refreshToken: '', expiresAt: new Date(Date.now() + 3600_000).toISOString() }, user }, version: 0 };
+  const state = { state: { session: { accessToken: fixtureToken(features), refreshToken: '', expiresAt: new Date(Date.now() + 3600_000).toISOString() }, user }, version: 0 };
   await context.addInitScript(
     ([origin, value]) => {
       if (window.location.origin === origin) window.localStorage.setItem('projects-auth-storage', value);

@@ -16,6 +16,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { UPGRADE_URL } from '@/components/subscription/subscription-banner';
 import { PageHeader } from '@/components/common/page-header';
 import { CountRow } from '@/components/common/list-parts';
+import { cn } from '@/lib/utils';
+import { ClientRollup } from './client-rollup';
 
 const PAGE_SIZE = 25;
 
@@ -58,7 +60,12 @@ export default function PortfolioPage() {
   const hasBudgetTracking = useFeature('budget_tracking');
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('');
-  const { data, isLoading, isError, refetch } = usePortfolio(orgSlug, { page, limit: PAGE_SIZE, status: status || undefined }, hasBudgetTracking);
+  const [view, setView] = useState<'projects' | 'clients'>('projects');
+  const { data, isLoading, isError, refetch } = usePortfolio(
+    orgSlug,
+    { page, limit: PAGE_SIZE, status: status || undefined },
+    hasBudgetTracking && view === 'projects',
+  );
 
   const columns = useMemo<DataTableColumn<ProjectFinancials>[]>(
     () => [
@@ -161,7 +168,11 @@ export default function PortfolioPage() {
     <div className="space-y-5">
       <PageHeader
         title="Portfolio"
-        subtitle="Every project's budget, spend and earned value, worst health first on each page."
+        subtitle={
+          view === 'projects'
+            ? "Every project's budget, spend and earned value, worst health first on each page."
+            : 'Invoiced, cost and margin to date for each client, across their projects.'
+        }
         className="mb-0"
         actions={
           <SearchableCombobox
@@ -178,27 +189,56 @@ export default function PortfolioPage() {
         }
       />
 
-      <CountRow items={(['red', 'amber', 'green', 'none'] as const).map((h) => ({ label: HEALTH_LABEL[h], value: counts[h] ?? 0 }))} />
+      <div role="tablist" aria-label="Portfolio view" className="flex gap-1 rounded-lg bg-muted p-1 sm:w-fit">
+        {(
+          [
+            ['projects', 'By project'],
+            ['clients', 'By client'],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={view === key}
+            onClick={() => setView(key)}
+            className={cn(
+              'h-10 flex-1 rounded-md px-4 text-sm font-medium transition-colors sm:h-8',
+              view === key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-      <DataTable
-        columns={columns}
-        rows={rows}
-        rowKey={(p) => p.project_id}
-        loading={isLoading}
-        loadingRows={5}
-        error={isError}
-        onRetry={() => void refetch()}
-        emptyState={<EmptyState title="No projects" description="Projects appear here with their financial health." />}
-        gridLines="rows"
-        storageKey="projects-portfolio-columns"
-        showExportCsv
-        exportFileName="portfolio"
-        onRowClick={(p) => router.push(`/${orgSlug}/projects/${p.project_id}/financials`)}
-        page={page}
-        totalPages={pages}
-        onPageChange={setPage}
-        total={total}
-      />
+      {view === 'clients' ? (
+        <ClientRollup orgSlug={orgSlug} status={status} />
+      ) : (
+        <>
+          <CountRow items={(['red', 'amber', 'green', 'none'] as const).map((h) => ({ label: HEALTH_LABEL[h], value: counts[h] ?? 0 }))} />
+
+          <DataTable
+            columns={columns}
+            rows={rows}
+            rowKey={(p) => p.project_id}
+            loading={isLoading}
+            loadingRows={5}
+            error={isError}
+            onRetry={() => void refetch()}
+            emptyState={<EmptyState title="No projects" description="Projects appear here with their financial health." />}
+            gridLines="rows"
+            storageKey="projects-portfolio-columns"
+            showExportCsv
+            exportFileName="portfolio"
+            onRowClick={(p) => router.push(`/${orgSlug}/projects/${p.project_id}/financials`)}
+            page={page}
+            totalPages={pages}
+            onPageChange={setPage}
+            total={total}
+          />
+        </>
+      )}
     </div>
   );
 }
