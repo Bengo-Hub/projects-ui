@@ -1,11 +1,13 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { ORG, json } from './qa-mocks';
-import { ANA, BEN, PROJECT_ID, setupAccess } from './access-mocks';
+import { ANA, BEN, ME, PROJECT_ID, setupAccess } from './access-mocks';
 
 // Team and roles (sprint 17) at phone and desktop widths: invite, a role with an end date,
 // deactivation, custom roles, copy on write of a default role, a held role that cannot be deleted,
 // codes held through manage locked in the editor, the project team's people picker, sign out
-// revoking the SSO session, the callback's state check and the <Can> guard.
+// revoking the SSO session, the callback's state check and the <Can> guard. After the sprint: the
+// person screen (roles, status, effective permissions, the Team actions and guards) and the tender
+// committee people picker and the named committee list.
 
 /** Opens a shared combobox by its current text and picks the option whose name starts with option. */
 async function pick(scope: Page | Locator, trigger: string | RegExp, option: string) {
@@ -240,4 +242,141 @@ test('Team sits next to Roles and access in the menu for role managers only', as
   } else {
     await expect(page.getByTestId('desktop-sidebar').getByRole('link', { name: 'Team', exact: true })).toBeVisible();
   }
+});
+
+test('a person opens from the Team page with roles, status, last seen and effective permissions by module', async ({ page, context, baseURL }) => {
+  const { s } = await setupAccess(page, context, baseURL!);
+  await page.goto(`/${ORG}/settings/team`);
+  await page.getByRole('link', { name: 'Open Ben Otieno' }).filter({ visible: true }).first().click();
+  await expect(page).toHaveURL(new RegExp(`/${ORG}/settings/team/${BEN}$`));
+  await expect(page.getByRole('heading', { name: 'Ben Otieno' })).toBeVisible();
+  expect(s.userReads).toContain(BEN);
+
+  const roles = page.getByRole('list', { name: 'Roles held' });
+  await expect(roles.getByText('Site lead')).toBeVisible();
+  await expect(roles.getByText('No end date')).toBeVisible();
+  const facts = page.getByTestId('person-facts');
+  await expect(facts.getByText('Active', { exact: true })).toBeVisible();
+  await expect(facts.getByText('Not yet')).toBeVisible();
+
+  // Site lead holds projects.projects.view and projects.tasks.view: one group per module.
+  const perms = page.getByTestId('effective-permissions');
+  await expect(perms.getByRole('region', { name: 'Projects' }).getByText('View projects')).toBeVisible();
+  await expect(perms.getByRole('region', { name: 'Tasks' }).getByText('View tasks')).toBeVisible();
+  await expect(perms.getByText('Delete tasks')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Team' }).first()).toHaveAttribute('href', `/${ORG}/settings/team`);
+});
+
+test('the person screen deactivates after confirming and then shows no permissions', async ({ page, context, baseURL }) => {
+  const { s } = await setupAccess(page, context, baseURL!);
+  await page.goto(`/${ORG}/settings/team/${BEN}`);
+  await page.getByRole('button', { name: 'Deactivate Ben Otieno' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByText('Ben Otieno keeps their roles but can do nothing in projects until reactivated.')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Deactivate' }).click();
+
+  await expect(page.getByText('Person deactivated')).toBeVisible();
+  expect(s.statuses).toEqual([{ userId: BEN, status: 'inactive' }]);
+  await expect(page.getByTestId('person-facts').getByText('Deactivated', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('person-facts').getByText('None while deactivated')).toBeVisible();
+  await expect(page.getByText('Nothing while deactivated.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Reactivate Ben Otieno' })).toBeVisible();
+});
+
+test('the person screen gives a role with an end date through the same dialog as Team', async ({ page, context, baseURL }) => {
+  const { s } = await setupAccess(page, context, baseURL!);
+  await page.goto(`/${ORG}/settings/team/${ANA}`);
+  await expect(page.getByRole('list', { name: 'Roles held' }).getByText('Automatic, from their organisation role')).toBeVisible();
+  await page.getByRole('button', { name: 'Roles of Ana Wanjiru' }).click();
+  const dialog = page.getByRole('dialog');
+  await pick(dialog, 'Choose a role', 'Viewer');
+  await dialog.getByLabel('End date').fill('2099-01-31');
+  await dialog.getByRole('button', { name: 'Give role' }).click();
+
+  await expect(page.getByText('Viewer role given')).toBeVisible();
+  expect(s.assigns.map((a) => [a.userId, a.body.role_code])).toEqual([[ANA, 'viewer']]);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('list', { name: 'Roles held' }).getByText(/^Until /)).toBeVisible();
+});
+
+test('the person screen follows the Team guards: no status change without admin tier, no actions on yourself', async ({ page, context, baseURL }) => {
+  await setupAccess(page, context, baseURL!, { permissions: ['projects.rbac.manage', 'projects.projects.view'], roles: ['team_lead'] });
+  await page.goto(`/${ORG}/settings/team/${BEN}`);
+  await expect(page.getByRole('heading', { name: 'Ben Otieno' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Roles of Ben Otieno' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^(Deactivate|Reactivate) / })).toHaveCount(0);
+
+  await page.goto(`/${ORG}/settings/team/${ME}`);
+  await expect(page.getByRole('heading', { name: 'Owner' })).toBeVisible();
+  await expect(page.getByText('This is you. Another administrator changes your access.')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Roles of / })).toHaveCount(0);
+});
+
+test('a tender committee adds a member picked by name with tenders.manage only', async ({ page, context, baseURL }) => {
+  await setupAccess(page, context, baseURL!, {
+    permissions: ['projects.tenders.view', 'projects.tenders.manage'],
+    roles: ['bid_manager'],
+  });
+  const TENDER = '77777777-7777-4777-8777-777777777777';
+  const COMMITTEE = '88888888-8888-4888-8888-888888888888';
+  const adds: { user_id: string; role: string }[] = [];
+  await page.route(new RegExp(`/api/v1/${ORG}/tenders/${TENDER}/committees(\\?.*)?$`), (r) =>
+    json(r, {
+      data: [{
+        id: COMMITTEE, tender_id: TENDER, tenant_id: '55555555-5555-4555-8555-555555555555', name: 'Evaluation panel', created_at: '2026-11-01T08:00:00Z',
+        edges: { members: [{ id: 'cm1', committee_id: COMMITTEE, user_id: ANA, role: 'chair', joined_at: '2026-11-01T08:00:00Z' }] },
+      }],
+      total: 1, limit: 20, page: 1, hasMore: false,
+    }),
+  );
+  await page.route(new RegExp(`/api/v1/${ORG}/tenders/${TENDER}/committees/${COMMITTEE}/members$`), (r) => {
+    adds.push(r.request().postDataJSON() as { user_id: string; role: string });
+    return json(r, { id: 'cm2', committee_id: COMMITTEE, user_id: BEN, role: 'member' }, 201);
+  });
+  await page.goto(`/${ORG}/tenders/${TENDER}/committees`);
+  const card = page.getByTestId('committee-card');
+  // The member row reads as a name, not a raw id, and there is no id box.
+  await expect(card.getByText('Ana Wanjiru')).toBeVisible();
+  await expect(page.getByLabel('User ID')).toHaveCount(0);
+
+  await card.getByRole('button', { name: 'Choose a person', exact: true }).click();
+  // Ana already sits on the committee, so only Ben is offered.
+  await expect(page.getByRole('button', { name: /^Ana Wanjiru/ }).filter({ visible: true })).toHaveCount(0);
+  await page.getByRole('button', { name: /^Ben Otieno/ }).filter({ visible: true }).last().click();
+  await card.getByRole('button', { name: 'Add to Evaluation panel' }).click();
+
+  await expect.poll(() => adds).toEqual([{ user_id: BEN, role: 'member' }]);
+});
+
+test('a tender viewer sees committee members by the names the list carries, with no people search', async ({ page, context, baseURL }) => {
+  await setupAccess(page, context, baseURL!, { permissions: ['projects.tenders.view'], roles: ['viewer'] });
+  const TENDER = '77777777-7777-4777-8777-777777777777';
+  const COMMITTEE = '88888888-8888-4888-8888-888888888888';
+  let peopleCalls = 0;
+  await page.route(new RegExp(`/api/v1/${ORG}/people(\\?.*)?$`), (r) => {
+    peopleCalls++;
+    return json(r, { error: 'forbidden' }, 403);
+  });
+  await page.route(new RegExp(`/api/v1/${ORG}/tenders/${TENDER}/committees(\\?.*)?$`), (r) =>
+    json(r, {
+      data: [{
+        id: COMMITTEE, tender_id: TENDER, tenant_id: '55555555-5555-4555-8555-555555555555', name: 'Evaluation panel', created_at: '2026-11-01T08:00:00Z',
+        edges: { members: [
+          { id: 'cm1', committee_id: COMMITTEE, user_id: ANA, role: 'chair', joined_at: '2026-11-01T08:00:00Z', user_name: 'Ana Wanjiru', email: 'ana@acme.test' },
+          { id: 'cm2', committee_id: COMMITTEE, user_id: BEN, role: 'member', joined_at: '2026-11-01T08:00:00Z', user_name: '', email: 'ben@acme.test' },
+        ] },
+      }],
+    }),
+  );
+  await page.goto(`/${ORG}/tenders/${TENDER}/committees`);
+  const card = page.getByTestId('committee-card');
+  await expect(card.getByText('Ana Wanjiru')).toBeVisible();
+  await expect(card.getByText('ana@acme.test')).toBeVisible();
+  // No name on file: the email stands in, never the raw id.
+  await expect(card.getByText('ben@acme.test')).toBeVisible();
+  await expect(card.getByText(ANA)).toHaveCount(0);
+  await expect(card.getByText(BEN)).toHaveCount(0);
+  // A viewer gets no picker and makes no people search.
+  await expect(card.getByRole('button', { name: 'Choose a person', exact: true })).toHaveCount(0);
+  expect(peopleCalls).toBe(0);
 });

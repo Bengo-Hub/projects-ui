@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, Users, Trash2 } from 'lucide-react';
 import {
   useTenderCommittees,
@@ -9,6 +9,7 @@ import {
   useAddCommitteeMember,
   useRemoveCommitteeMember,
 } from '@/hooks/useTenders';
+import { useStaffPeople } from '@/hooks/useRbac';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageLoading } from '@/components/ui/loading';
@@ -17,8 +18,11 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
 import { PageHeader } from '@/components/common/page-header';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
+import { StaffPicker } from '@/components/common/staff-picker';
 import { useServicePermissions } from '@/hooks/usePermissions';
 import { PERMS } from '@/lib/auth/permissions';
+import type { PickPerson } from '@/lib/api/rbac';
+import type { TenderCommittee } from '@/types';
 
 const COMMITTEE_ROLES: ComboboxOption[] = [
   { value: 'chair', label: 'Chair' },
@@ -34,11 +38,15 @@ export default function CommitteesPage() {
   const { data, isLoading, isError } = useTenderCommittees(orgSlug, tenderId);
   const createCommittee = useCreateCommittee(orgSlug, tenderId);
   const { can } = useServicePermissions();
-  // Committees and their members are tender management (projects.tenders.manage).
+  // Committees and their members are tender management (projects.tenders.manage), which also
+  // opens the people search (GET /people) the member picker uses.
   const canManage = can(PERMS.tendersManage);
+  // Member rows carry their names from the committee list; the people list (managers only) fills
+  // in anyone the list could not name. A row with neither shows the id.
+  const staff = useStaffPeople(orgSlug, canManage);
+  const names = useMemo(() => new Map((staff.data ?? []).map((p) => [p.user_id, p])), [staff.data]);
 
   const [newCommitteeName, setNewCommitteeName] = useState('');
-  const [addMemberState, setAddMemberState] = useState<Record<string, { userId: string; role: string }>>({});
 
   const committees = data?.data ?? [];
 
@@ -93,8 +101,7 @@ export default function CommitteesPage() {
               tenderId={tenderId}
               committee={committee}
               canManage={canManage}
-              addMemberState={addMemberState}
-              setAddMemberState={setAddMemberState}
+              names={names}
             />
           ))}
         </div>
@@ -108,56 +115,74 @@ function CommitteeCard({
   tenderId,
   committee,
   canManage,
-  addMemberState,
-  setAddMemberState,
+  names,
 }: {
   orgSlug: string;
   tenderId: string;
-  committee: { id: string; name: string; edges?: { members?: Array<{ id: string; user_id: string; role: string }> } };
+  committee: TenderCommittee;
   canManage: boolean;
-  addMemberState: Record<string, { userId: string; role: string }>;
-  setAddMemberState: React.Dispatch<React.SetStateAction<Record<string, { userId: string; role: string }>>>;
+  names: ReadonlyMap<string, PickPerson>;
 }) {
   const addMember = useAddCommitteeMember(orgSlug, tenderId, committee.id);
   const removeMember = useRemoveCommitteeMember(orgSlug, tenderId, committee.id);
-  const members = committee.edges?.members ?? [];
-  const localState = addMemberState[committee.id] ?? { userId: '', role: 'member' };
+  const members = useMemo(() => committee.edges?.members ?? [], [committee.edges?.members]);
+  const memberIds = useMemo(() => members.map((m) => m.user_id), [members]);
+  const [userId, setUserId] = useState('');
+  const [role, setRole] = useState('member');
   const [removing, setRemoving] = useState<string | null>(null);
 
   function handleAddMember(e: React.FormEvent) {
     e.preventDefault();
-    if (!localState.userId.trim()) return;
-    addMember.mutate({ user_id: localState.userId, role: localState.role }, {
-      onSuccess: () => setAddMemberState((s) => ({ ...s, [committee.id]: { userId: '', role: 'member' } })),
+    if (!userId) return;
+    // The API contract is unchanged: { user_id, role }.
+    addMember.mutate({ user_id: userId, role }, {
+      onSuccess: () => {
+        setUserId('');
+        setRole('member');
+      },
     });
   }
 
   return (
-    <Card>
+    <Card data-testid="committee-card">
       <CardHeader>
         <CardTitle className="text-sm">{committee.name}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {members.length > 0 ? (
           <div className="space-y-1">
-            {members.map((m) => (
-              <div key={m.id} className="flex items-center justify-between text-sm py-1 border-b border-border last:border-0">
-                <span className="font-mono text-xs text-muted-foreground">{m.user_id}</span>
-                <div className="flex items-center gap-2">
-                  <span className="capitalize text-xs">{m.role}</span>
-                  {canManage && (
-                    <button
-                      type="button"
-                      onClick={() => setRemoving(m.user_id)}
-                      aria-label="Remove member"
-                      className="rounded p-1 text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+            {members.map((m) => {
+              // The list's own names first; the people list only fills a gap.
+              const person = names.get(m.user_id);
+              const name = m.user_name || person?.name || '';
+              const email = m.email || person?.email || '';
+              const label = name || email;
+              return (
+                <div key={m.id} className="flex items-center justify-between gap-2 text-sm py-1 border-b border-border last:border-0">
+                  {label ? (
+                    <span className="min-w-0">
+                      <span className="block truncate">{label}</span>
+                      {name && email && <span className="block truncate text-xs text-muted-foreground">{email}</span>}
+                    </span>
+                  ) : (
+                    <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">{m.user_id}</span>
                   )}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="capitalize text-xs">{m.role}</span>
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={() => setRemoving(m.user_id)}
+                        aria-label={`Remove ${label || 'member'}`}
+                        className="rounded p-1 text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">No members yet</p>
@@ -165,23 +190,16 @@ function CommitteeCard({
 
         {canManage && (
         <form onSubmit={handleAddMember} className="flex flex-col gap-2 pt-1 sm:flex-row">
-          <input
-            type="text"
-            aria-label="User ID"
-            value={localState.userId}
-            onChange={(e) => setAddMemberState((s) => ({ ...s, [committee.id]: { ...localState, userId: e.target.value } }))}
-            className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-base focus:outline-none focus:ring-1 focus:ring-ring sm:text-xs"
-            placeholder="User ID"
-          />
+          <StaffPicker orgSlug={orgSlug} value={userId} onChange={setUserId} exclude={memberIds} className="min-w-0 flex-1" />
           <SearchableCombobox
             options={COMMITTEE_ROLES}
-            value={localState.role}
-            onChange={(v) => setAddMemberState((s) => ({ ...s, [committee.id]: { ...localState, role: v || 'member' } }))}
+            value={role}
+            onChange={(v) => setRole(v || 'member')}
             clearable={false}
             searchPlaceholder="Find a role"
             className="w-full text-xs sm:w-36"
           />
-          <Button type="submit" size="sm" disabled={!localState.userId.trim() || addMember.isPending}>
+          <Button type="submit" size="sm" disabled={!userId || addMember.isPending} aria-label={`Add to ${committee.name}`}>
             <Plus className="h-3.5 w-3.5" />
           </Button>
         </form>

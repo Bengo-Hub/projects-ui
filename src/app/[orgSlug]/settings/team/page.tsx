@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { UserPlus, Users } from 'lucide-react';
 import { DataTable, type DataTableColumn } from '@bengo-hub/shared-ui-lib/data-table';
 import { formatDate } from '@bengo-hub/shared-ui-lib/format';
@@ -10,16 +10,16 @@ import { useDebouncedSearch } from '@bengo-hub/shared-ui-lib/search';
 import { RequirePermission } from '@/components/auth/require-permission';
 import { PageHeader } from '@/components/common/page-header';
 import { ListError, ListSearch } from '@/components/common/list-parts';
-import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageLoading } from '@/components/ui/loading';
 import { useServicePermissions } from '@/hooks/usePermissions';
-import { useRbacRoles, useRbacUsers, useSetUserStatus } from '@/hooks/useRbac';
+import { useRbacRoles, useRbacUsers } from '@/hooks/useRbac';
 import { PERMS, assignmentState, isAdminTier, roleName } from '@/lib/auth/permissions';
 import type { RbacUser } from '@/lib/api/rbac';
 import { InviteDialog } from './invite-dialog';
 import { MemberRolesDialog, personLabel } from './member-roles-dialog';
+import { PersonStatusDialog } from './person-status-dialog';
 
 const PAGE_SIZE = 50;
 
@@ -47,6 +47,7 @@ function RoleBadges({ user, nameOf }: { user: RbacUser; nameOf: (code: string) =
 
 function Team() {
   const params = useParams();
+  const router = useRouter();
   const orgSlug = (params?.orgSlug as string) ?? '';
   const { profile, subject } = useServicePermissions();
   const me = profile?.user_id ?? '';
@@ -59,7 +60,6 @@ function Team() {
 
   const roles = useRbacRoles(orgSlug);
   const users = useRbacUsers(orgSlug, { search: search.term || undefined, page, limit: PAGE_SIZE });
-  const setStatus = useSetUserStatus(orgSlug);
   const [inviting, setInviting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [statusFor, setStatusFor] = useState<RbacUser | null>(null);
@@ -69,6 +69,8 @@ function Team() {
   // The dialog follows the live row, so a role given there shows at once.
   const editing = rows.find((u) => u.user_id === editingId) ?? null;
   const total = users.data?.total ?? 0;
+
+  const personHref = useCallback((userId: string) => `/${orgSlug}/settings/team/${userId}`, [orgSlug]);
 
   const columns = useMemo<DataTableColumn<RbacUser>[]>(() => {
     const nameOf = (code: string) => roleList.find((r) => r.code === code)?.name || roleName(code);
@@ -81,7 +83,14 @@ function Team() {
         render: (u) => (
           <span className="min-w-0">
             <span className="block truncate font-medium">
-              {personLabel(u)}
+              <Link
+                href={personHref(u.user_id)}
+                onClick={(e) => e.stopPropagation()}
+                className="hover:underline"
+                aria-label={`Open ${personLabel(u)}`}
+              >
+                {personLabel(u)}
+              </Link>
               {u.user_id === me && <span className="ml-2 text-xs font-normal text-muted-foreground">(you)</span>}
             </span>
             {u.name && u.email && <span className="block truncate text-xs text-muted-foreground">{u.email}</span>}
@@ -153,11 +162,9 @@ function Team() {
           ),
       },
     ];
-  }, [roleList, me, adminTier]);
+  }, [roleList, me, adminTier, personHref]);
 
   if (roles.isLoading || (users.isLoading && !users.data)) return <PageLoading />;
-
-  const deactivating = statusFor?.status !== 'inactive';
 
   return (
     <div className="space-y-5">
@@ -203,30 +210,13 @@ function Team() {
           totalPages={Math.max(1, Math.ceil(total / PAGE_SIZE))}
           onPageChange={setPage}
           total={total}
+          onRowClick={(u) => router.push(personHref(u.user_id))}
         />
       )}
 
       <InviteDialog orgSlug={orgSlug} open={inviting} roles={roleList} adminTier={adminTier} onClose={() => setInviting(false)} />
       <MemberRolesDialog orgSlug={orgSlug} user={editing} roles={roleList} adminTier={adminTier} onClose={() => setEditingId(null)} />
-      <ConfirmDialog
-        open={!!statusFor}
-        onOpenChange={(o) => !o && setStatusFor(null)}
-        title={deactivating ? 'Deactivate this person?' : 'Reactivate this person?'}
-        description={
-          statusFor
-            ? deactivating
-              ? `${personLabel(statusFor)} keeps their roles but can do nothing in projects until reactivated.`
-              : `${personLabel(statusFor)} gets back what their roles allow.`
-            : undefined
-        }
-        confirmLabel={deactivating ? 'Deactivate' : 'Reactivate'}
-        variant={deactivating ? 'danger' : 'info'}
-        loading={setStatus.isPending}
-        onConfirm={() => {
-          if (!statusFor) return;
-          setStatus.mutate({ userId: statusFor.user_id, status: deactivating ? 'inactive' : 'active' }, { onSettled: () => setStatusFor(null) });
-        }}
-      />
+      <PersonStatusDialog orgSlug={orgSlug} person={statusFor} onClose={() => setStatusFor(null)} />
     </div>
   );
 }

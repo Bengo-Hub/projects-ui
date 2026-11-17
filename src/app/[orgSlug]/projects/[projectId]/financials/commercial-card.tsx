@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShareSwitch } from '@/components/portal/share-switch';
 import { useProject, useUpdateProject } from '@/hooks/useProjects';
-import { useServicePermissions } from '@/hooks/usePermissions';
+import { Can } from '@/components/auth/can';
 import { PERMS } from '@/lib/auth/permissions';
 import { projectsApi, type LookupOption } from '@/lib/api/projects';
 import type { BillingType, Commercial } from '@/lib/api/financials';
@@ -86,11 +86,8 @@ export function CommercialCard({
   unbilledHours?: number;
 }) {
   const [editing, setEditing] = useState(false);
-  const { can } = useServicePermissions();
   const { data: project } = useProject(orgSlug, projectId);
   const rates = rateTermsOf(project?.metadata);
-  // The terms are saved with PUT /projects/{id}, which needs projects.projects.change.
-  const canEdit = can(PERMS.projectsChange);
   const c = commercial;
   const margin = c.projected_margin;
   const billed = !!c.billing_type && c.billing_type !== 'non_billable';
@@ -99,10 +96,13 @@ export function CommercialCard({
     <Card id="contract" className="scroll-mt-20">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Contract</CardTitle>
-        {!editing && canEdit && (
-          <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-            <Pencil className="mr-1 h-4 w-4" /> Edit terms
-          </Button>
+        {/* The terms are saved with PUT /projects/{id}, which needs projects.projects.change. */}
+        {!editing && (
+          <Can permission={PERMS.projectsChange}>
+            <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+              <Pencil className="mr-1 h-4 w-4" /> Edit terms
+            </Button>
+          </Can>
         )}
       </CardHeader>
       <CardContent>

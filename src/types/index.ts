@@ -211,6 +211,9 @@ export interface TenderCommitteeMember {
   user_id: string;
   role: string;
   joined_at: string;
+  /** From projects_users on the list; empty for someone who never signed in. */
+  user_name?: string;
+  email?: string;
 }
 
 export interface TenderEvaluation {

@@ -374,6 +374,30 @@ export function moduleTitle(module: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+/**
+ * A person's effective permission codes (GET /rbac/users/{id}) grouped by module for reading, in
+ * the registry's order with its names. A code the registry does not list (an older or newer
+ * build) still shows, under the module its code names and with the code as its name, after the
+ * known ones. Duplicates show once.
+ */
+export function effectivePermissionGroups(
+  codes: readonly string[],
+  registry: readonly { code: string; name: string; module: string }[],
+): { module: string; title: string; perms: { code: string; name: string }[] }[] {
+  const held = new Set(codes);
+  const known = registry.filter((p) => held.has(p.code));
+  const listed = new Set(known.map((p) => p.code));
+  const unknown = [...held]
+    .filter((c) => !listed.has(c))
+    .sort()
+    .map((code) => ({ code, name: code, module: code.split('.')[1] || 'other' }));
+  return groupByModule([...known, ...unknown]).map((g) => ({
+    module: g.module,
+    title: moduleTitle(g.module),
+    perms: g.perms.map((p) => ({ code: p.code, name: p.name })),
+  }));
+}
+
 /** The end of the chosen day (local time) as an ISO time, or null for no end date. */
 export function endOfDayISO(date: string): string | null {
   return date ? new Date(`${date}T23:59:59`).toISOString() : null;

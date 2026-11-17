@@ -103,3 +103,26 @@ test('a client posts on the thread with an idempotency key; no mention list is o
   await expect(mine).toHaveAttribute('data-author-kind', 'client');
   expect(s.thread.at(-1)?.author_id).toBe(CLIENT_ID);
 });
+
+test('a portal callback whose state does not match shows the shared sign-in error and no token request', async ({ page, context, baseURL }) => {
+  const origin = new URL(baseURL!).origin;
+  // The portal's own PKCE namespace; the staff keys stay empty.
+  await context.addInitScript((o) => {
+    if (window.location.origin === o) {
+      window.sessionStorage.setItem('portal_pkce_state', 'expected-state');
+      window.sessionStorage.setItem('portal_pkce_verifier', 'verifier');
+    }
+  }, origin);
+  let tokenRequests = 0;
+  await page.route(/\/api\/v1\/token(\?.*)?$/, (r) => {
+    tokenRequests++;
+    return r.fulfill({ status: 400, contentType: 'application/json', body: '{"error":"should not be called"}' });
+  });
+  await page.goto(`/${ORG}/portal/auth/callback?code=abc&state=forged-state`);
+  await expect(page.getByRole('heading', { name: 'Sign-in failed' })).toBeVisible();
+  await expect(page.getByText('Sign-in session mismatch. Please try again.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign in again' })).toBeVisible();
+  expect(tokenRequests).toBe(0);
+  // The forged callback spent the portal's verifier as well as its state.
+  expect(await page.evaluate(() => [window.sessionStorage.getItem('portal_pkce_state'), window.sessionStorage.getItem('portal_pkce_verifier')])).toEqual([null, null]);
+});

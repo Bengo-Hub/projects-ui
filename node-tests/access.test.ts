@@ -9,6 +9,7 @@ const {
   isReservedRole,
   groupByModule,
   moduleTitle,
+  effectivePermissionGroups,
   endOfDayISO,
   assignmentState,
   assignableRoles,
@@ -54,6 +55,27 @@ test('the editor groups by module in registry order', () => {
   assert.equal(moduleTitle('rbac'), 'Team and roles');
   assert.equal(moduleTitle('change_requests'), 'Change requests');
   assert.equal(moduleTitle('tenders'), 'Tenders');
+});
+
+test('a person\'s effective permissions group by module in registry order, unknown codes last', () => {
+  const registry = [
+    { code: 'projects.projects.view', name: 'View projects', module: 'projects' },
+    { code: 'projects.tasks.view', name: 'View tasks', module: 'tasks' },
+    { code: 'projects.tasks.add', name: 'Create tasks', module: 'tasks' },
+    { code: 'projects.rbac.manage', name: 'Manage roles', module: 'rbac' },
+  ];
+  const groups = effectivePermissionGroups(
+    ['projects.tasks.add', 'projects.projects.view', 'projects.tasks.add', 'projects.tasks.view', 'projects.ledger.view'],
+    registry,
+  );
+  assert.deepEqual(groups.map((g) => g.module), ['projects', 'tasks', 'ledger']);
+  assert.deepEqual(groups[1].perms.map((p) => p.name), ['View tasks', 'Create tasks']);
+  assert.equal(groups[1].title, 'Tasks');
+  // A code the registry does not know keeps its code as its name.
+  assert.deepEqual(groups[2], { module: 'ledger', title: 'Ledger', perms: [{ code: 'projects.ledger.view', name: 'projects.ledger.view' }] });
+  // Nothing held, nothing shown; codes not held never show.
+  assert.deepEqual(effectivePermissionGroups([], registry), []);
+  assert.equal(effectivePermissionGroups(['projects.rbac.manage'], registry)[0].title, 'Team and roles');
 });
 
 test('end dates: end of the chosen day, none when empty; state of a held role', () => {

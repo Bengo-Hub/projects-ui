@@ -9,7 +9,6 @@ import {
   type UserProfile,
 } from '@/lib/auth/api';
 import {
-  consumeState,
   consumeVerifier,
   generateCodeChallenge,
   generateCodeVerifier,
@@ -35,7 +34,8 @@ interface PortalAuthState {
 
   initialize: () => Promise<void>;
   redirectToSSO: (orgSlug: string, returnTo?: string) => Promise<void>;
-  handleCallback: (orgSlug: string, code: string, state: string | null) => Promise<void>;
+  /** Exchanges the code; the callback page has already checked the PKCE state. */
+  handleCallback: (orgSlug: string, code: string) => Promise<void>;
   logout: (orgSlug: string) => void;
 }
 
@@ -116,11 +116,10 @@ export const usePortalAuthStore = create<PortalAuthState>()(
         }
       },
 
-      handleCallback: async (orgSlug, code, state) => {
+      handleCallback: async (orgSlug, code) => {
         set({ status: 'syncing', error: null });
         const verifier = consumeVerifier(PORTAL_PKCE_NS);
-        const expected = consumeState(PORTAL_PKCE_NS);
-        if (!verifier || (expected && state !== expected)) {
+        if (!verifier) {
           set({ status: 'error', error: 'This sign-in link has expired. Start again from the portal.' });
           return;
         }

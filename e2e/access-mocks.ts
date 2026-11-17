@@ -55,6 +55,8 @@ export interface AccessState {
   permissionPuts: { roleId: string; codes: string[] }[];
   memberAdds: { user_id: string; role_code: string }[];
   peopleSearches: string[];
+  /** GET /rbac/users/{id} calls (the person screen). */
+  userReads: string[];
 }
 
 const catalogue = [
@@ -106,6 +108,7 @@ export function freshAccess(): AccessState {
     permissionPuts: [],
     memberAdds: [],
     peopleSearches: [],
+    userReads: [],
   };
 }
 
@@ -178,6 +181,15 @@ async function rbacRoute(route: Route, s: AccessState) {
     return route.fulfill({ status: 204 });
   }
   m = path.match(/^\/users\/([^/]+)$/);
+  if (m && method === 'GET') {
+    s.userReads.push(m[1]);
+    const u = s.users.find((x) => x.user_id === m![1]);
+    if (!u) return json(route, { error: 'user not found' }, 404);
+    // Effective permissions: the running roles' codes, none while deactivated.
+    const running = u.assignments.filter((a) => !a.expired).map((a) => a.role_code);
+    const perms = u.status === 'inactive' ? [] : [...new Set(s.roles.filter((r) => running.includes(r.code)).flatMap((r) => r.permissions))];
+    return json(route, { ...u, permissions: perms });
+  }
   if (m && method === 'PATCH') {
     const status = (body() as { status: string }).status;
     s.statuses.push({ userId: m[1], status });

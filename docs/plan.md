@@ -457,6 +457,33 @@ no idle logout. Type check, lint, node tests (95), build and the full Playwright
   read only administrator role, the project team people picker, sign out revoking the SSO
   session, the callback state mismatch, `<Can>`, the Team menu entry).
 
+### Sprint 17 follow ups (2026-11-17)
+
+- [x] **Client portal callback.** `/{org}/portal/auth/callback` checks the PKCE `state` from the
+  portal's own `portal_` namespace (the portal sign-in stores it there), as the staff callback
+  does: a mismatch is recorded in the portal store, spends the portal's verifier, makes no token
+  request and shows shared-ui-lib's `SSOCallbackError`. The projects-portal client and the portal's
+  storage keys are unchanged.
+- [x] **Committees.** A tender committee adds a member picked by name or email
+  (`components/common/staff-picker.tsx`, shared with the project team), leaving out people already
+  on it. Member rows read as names: the committee list carries `user_name` and `email` (projects-api
+  looks them up for the whole list at once), and the people list only fills a gap, so a tender
+  viewer never sees a raw id and makes no people search. The member add still sends
+  `{user_id, role}`. projects-api's `GET /people` now also takes `projects.tenders.manage`, the
+  permission the committee routes need.
+- [x] **Person screen.** `/{org}/settings/team/{userId}`, opened from a Team row: roles with end
+  dates (automatic and ended ones marked), status, last seen and effective permissions grouped by
+  module (`effectivePermissionGroups` over `GET /rbac/users/{id}` and the registry). Roles opens
+  the Team page's dialog; Deactivate and Reactivate (admin tier) share its confirm; nobody acts on
+  their own access.
+- [x] **`<Can>`.** The contract card's Edit terms. The other checks in the settings, team, roles
+  and project pages compute values or feed props and logic, so they stay.
+- [x] Tests: a node test for the grouping; Playwright at phone and desktop for the portal callback
+  mismatch, the person screen (open from Team, permissions by module, deactivate, a role with an
+  end date, the guards), the committee picker and a tender viewer reading named members.
+- [x] Type check, lint, node tests (96), build and the full Playwright run (215 passed, the 5
+  existing skips, phone and desktop) are green.
+
 ### Sprint 1: Foundation & SSO
 - [x] Project scaffolding with Next.js 15.
 - [x] SSO integration with `auth-ui`.

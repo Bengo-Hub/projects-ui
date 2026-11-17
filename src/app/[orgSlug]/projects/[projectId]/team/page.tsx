@@ -16,18 +16,13 @@ import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { ProjectNotFound } from '@/components/common/not-found-state';
 import { QADialog } from '@/components/qa/qa-dialog';
 import { useServicePermissions } from '@/hooks/usePermissions';
-import { useStaffPeople } from '@/hooks/useRbac';
+import { StaffPicker } from '@/components/common/staff-picker';
 import { isNotFound } from '@/lib/api/errors';
 import { PERMS, PROJECT_MEMBER_ROLES } from '@/lib/auth/permissions';
 import type { AddMemberInput } from '@/lib/api/members';
-import { rbacApi, type PickPerson } from '@/lib/api/rbac';
 import type { ProjectMember } from '@/types';
 
 const ROLE_OPTIONS: ComboboxOption[] = PROJECT_MEMBER_ROLES.map((r) => ({ value: r.value, label: r.label, description: r.description }));
-
-function personOption(p: PickPerson): ComboboxOption {
-  return { value: p.user_id, label: p.name || p.email || 'Not signed in yet', description: p.name && p.email ? p.email : undefined };
-}
 
 /**
  * Adds a teammate to the project: picked from the organisation's staff by name or email (never a
@@ -49,11 +44,6 @@ function AddMemberDialog({
   isPending: boolean;
 }) {
   const [form, setForm] = useState<AddMemberInput>({ user_id: '', role_code: 'member' });
-  const staff = useStaffPeople(orgSlug, open);
-  const options = useMemo(
-    () => (staff.data ?? []).filter((p) => !existing.includes(p.user_id)).map(personOption),
-    [staff.data, existing],
-  );
 
   function close() {
     setForm({ user_id: '', role_code: 'member' });
@@ -71,17 +61,12 @@ function AddMemberDialog({
       >
         <div>
           <span className="mb-1 block text-sm font-medium">Person</span>
-          <SearchableCombobox
-            options={options}
+          <StaffPicker
+            orgSlug={orgSlug}
             value={form.user_id}
             onChange={(v) => setForm((f) => ({ ...f, user_id: v }))}
-            onRemoteSearch={async (q) =>
-              (await rbacApi.people(orgSlug, q)).filter((p) => !existing.includes(p.user_id)).map(personOption)
-            }
-            loading={staff.isLoading}
-            placeholder="Choose a person"
-            searchPlaceholder="Search by name or email"
-            emptyText="Nobody matches. Invite them from Team first."
+            exclude={existing}
+            enabled={open}
           />
         </div>
         <div>

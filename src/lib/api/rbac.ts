@@ -143,7 +143,7 @@ export const rbacApi = {
     apiClient.get<PaginatedResponse<RbacAuditLog>>(`${base(orgSlug)}/rbac/audit-logs`, { ...params } as Record<string, unknown>),
   /** Invites a person by email through auth-api and gives them a projects role. */
   invite: (orgSlug: string, input: InviteInput) => apiClient.post<InviteResult>(`${base(orgSlug)}/users`, input),
-  /** Staff for pickers (never portal clients); needs members.manage or rbac.manage. */
+  /** Staff for pickers (never portal clients); needs members.manage, rbac.manage or tenders.manage. */
   people: (orgSlug: string, search = '', limit = 20) =>
     apiClient
       .get<PaginatedResponse<PickPerson>>(`${base(orgSlug)}/people`, { limit, ...(search ? { search } : {}) })
