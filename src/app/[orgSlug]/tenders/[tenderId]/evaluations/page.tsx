@@ -15,6 +15,7 @@ import { RichTextField, RichTextView } from '@/components/common/rich-text';
 import type { CreateEvaluationInput } from '@/lib/api/tenders';
 import { useServicePermissions } from '@/hooks/usePermissions';
 import { PERMS } from '@/lib/auth/permissions';
+import { TenderNav } from '@/components/tenders/tender-nav';
 
 function SubmitEvaluationModal({
   onClose,
@@ -117,6 +118,7 @@ export default function EvaluationsPage() {
         className="mb-0"
         actions={submitButton}
       />
+      <TenderNav orgSlug={orgSlug} tenderId={tenderId} />
 
       {evaluations.length === 0 ? (
         <EmptyState

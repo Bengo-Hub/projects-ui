@@ -15,6 +15,7 @@ import { ErrorBanner } from '@/components/ui/error-banner';
 import { formatDistanceToNow } from 'date-fns';
 import { useServicePermissions } from '@/hooks/usePermissions';
 import { PERMS } from '@/lib/auth/permissions';
+import { displayStatus, tenderStatusLabel } from '@/lib/tenders/logic';
 
 export default function DashboardPage() {
   const params = useParams();
@@ -134,7 +135,9 @@ export default function DashboardPage() {
                       <p className="text-sm font-medium truncate">{tender.title}</p>
                       <p className="text-xs text-muted-foreground">{tender.client_name}</p>
                     </div>
-                    <Badge status={tender.status} className="ml-2 shrink-0" />
+                    <Badge status={displayStatus(tender.status)} className="ml-2 shrink-0">
+                      {tenderStatusLabel(tender.status)}
+                    </Badge>
                   </Link>
                 ))}
               </div>

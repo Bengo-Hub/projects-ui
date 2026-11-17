@@ -29,7 +29,16 @@ Still open:
 - The other permission checks on the settings and project pages compute flags (columns, tabs,
   enabled queries, props, page header actions) and stay as they are; `<Can>` sits on Save as
   template and the contract's Edit terms.
-- The tenders list loads one page of 20; it needs Show more like tasks.
+- ~~The tenders list loads one page of 20; it needs Show more like tasks.~~ Done 2026-11-17 with
+  server search and sort (plan.md, "Tenders: API sprints 1 and 2").
+
+## Tenders (built 2026-11-17)
+
+The sections, submissions, documents, go/no-go, outcome, conversion, bid budget and tender edit screens are built
+(plan.md, "Tenders: API sprints 1 and 2"). Still open:
+
+- A "my sections" view across tenders (needs a projects-api route).
+- Notices to section assignees and reviewers, committee members and on award (notifications-api consumers).
 
 ## Security
 

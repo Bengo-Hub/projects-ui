@@ -181,7 +181,8 @@ export interface Tender {
   title: string;
   client_name: string;
   source?: string;
-  status: string; // draft, evaluating, submitted, awarded, lost, cancelled
+  /** draft, evaluating, preparing, no_go, submitted, under_review, shortlisted, awarded, lost, cancelled */
+  status: string;
   priority: string; // low, medium, high, critical
   estimated_value?: number;
   currency: string;
@@ -192,6 +193,164 @@ export interface Tender {
   created_at: string;
   updated_at: string;
   created_by: string;
+  metadata?: TenderMetadata;
+  /** GET /tenders/{id} only: the manual status moves open to the tender now. */
+  allowed_moves?: string[];
+  /** GET /tenders/{id} only: whether the caller may open the project the tender became. */
+  can_open_project?: boolean;
+}
+
+export interface BidBudgetLine {
+  name: string;
+  category?: 'expense' | 'revenue' | 'capex';
+  planned_amount: string;
+  notes?: string;
+}
+
+export interface TenderCriterion {
+  key: string;
+  label: string;
+  weight: number;
+  score: number;
+  note?: string;
+}
+
+export interface TenderGoDecision {
+  criteria: TenderCriterion[];
+  weighted_score: number;
+  threshold: number;
+  recommendation: 'go' | 'review' | 'no_go';
+  decision: 'go' | 'no_go';
+  comment?: string;
+  decided_by: string;
+  decided_at: string;
+  evaluations?: { count: number; average_score: number };
+}
+
+export interface TenderOutcome {
+  outcome: 'won' | 'lost';
+  award_value?: number;
+  award_date?: string;
+  contract_reference?: string;
+  contract_start?: string;
+  contract_end?: string;
+  loss_reason?: string;
+  competitor?: string;
+  competitor_price?: number;
+  lessons?: string;
+  recorded_by?: string;
+  recorded_at: string;
+}
+
+export interface TenderBudgetState {
+  status: 'not_needed' | 'not_allowed' | 'skipped' | 'pending' | 'pushing' | 'created' | 'failed';
+  budget_id?: string;
+  attempts?: number;
+  error?: string;
+  attempted_at?: string;
+}
+
+export interface TenderConversion {
+  project_id: string;
+  project_name: string;
+  converted_at: string;
+  converted_by: string;
+  members_added: number;
+  documents_linked: number;
+  template_id?: string;
+  template_name?: string;
+  budget?: TenderBudgetState;
+}
+
+/** Tender metadata: the user-set keys and the server-owned decision, outcome and conversion. */
+export interface TenderMetadata {
+  crm_contact_id?: string;
+  crm_contact_name?: string;
+  tags?: string[];
+  bid_budget?: { lines: BidBudgetLine[] };
+  go_decision?: TenderGoDecision;
+  go_decision_history?: TenderGoDecision[];
+  outcome?: TenderOutcome;
+  conversion?: TenderConversion;
+}
+
+export interface TenderEvaluationSummary {
+  count: number;
+  average_score: number;
+  min_score: number;
+  max_score: number;
+  evaluators: { evaluator_id: string; name: string; score: number; evaluated_at: string }[];
+  default_criteria: TenderCriterion[];
+  criteria_note: string;
+  default_threshold: number;
+}
+
+export interface TenderSection {
+  id: string;
+  tender_id: string;
+  title: string;
+  description?: string;
+  position: number;
+  assignee_id?: string | null;
+  reviewer_id?: string | null;
+  due_date?: string | null;
+  status: string;
+  document_id?: string | null;
+  submitted_at?: string | null;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  review_comment?: string;
+  assignee_name: string;
+  reviewer_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TenderSectionSummary {
+  total: number;
+  by_status: Record<string, number>;
+  ready: boolean;
+}
+
+export interface TenderSubmission {
+  id: string;
+  tender_id: string;
+  method: 'online' | 'email' | 'physical';
+  submitted_at: string;
+  submitted_by: string;
+  submitted_by_name: string;
+  recipient?: string;
+  reference?: string;
+  courier?: string;
+  notes?: string;
+  document_id?: string | null;
+  proof_document_id?: string | null;
+  metadata?: { resubmission?: boolean; email_subject?: string; sections_overridden?: boolean };
+  created_at: string;
+}
+
+export interface TenderDocument {
+  id: string;
+  tender_id: string;
+  file_url: string;
+  file_name: string;
+  file_size?: number;
+  mime_type?: string;
+  uploaded_by: string;
+  uploaded_at: string;
+  /** A signed link for a stored file, or the link itself. */
+  url: string;
+  stored: boolean;
+}
+
+export interface TenderConvertResult {
+  project: Project;
+  tender: Tender;
+  already_converted: boolean;
+  members_added: number;
+  documents_linked: number;
+  template: { id: string; name: string; task_count: number; milestone_count: number } | null;
+  budget: TenderBudgetState | null;
 }
 
 export interface TenderCommittee {

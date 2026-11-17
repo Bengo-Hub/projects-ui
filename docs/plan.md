@@ -484,6 +484,67 @@ no idle logout. Type check, lint, node tests (95), build and the full Playwright
 - [x] Type check, lint, node tests (96), build and the full Playwright run (215 passed, the 5
   existing skips, phone and desktop) are green.
 
+### Tenders: API sprints 1 and 2 (built 2026-11-17)
+
+These are projects-api's sprint 1 (tender management) and sprint 2 (tender to project conversion),
+not this file's own sprint 1 and 2 below. The pure rules sit in `src/lib/tenders/logic.ts` and
+mirror projects-api's tenders package, so a form says what the API would refuse before it is sent.
+
+- [x] **List.** Show more paging, 20 a page (`useTenderPages`), search by title, client or number
+  and a sort (deadline, value, created) on the server, status tabs for all ten statuses with
+  readable names (Won for awarded), the pipeline and win rate tiles, and the CRM client picker in
+  the new tender form (the contact lookup now opens for tenders.add and tenders.change). The
+  deadline is sent as a date, which projects-api now accepts. A status from before the current
+  vocabulary shows as Draft (`displayStatus`) and never breaks a page; the API offers it the moves
+  back to draft, evaluating or cancelled. Verified 2026-11-17: tsc, eslint, 108 node tests, build and
+  the full Playwright run (245 passed at phone and desktop, the 5 skips are the existing mouse and
+  touch cases).
+- [x] **Overview.** The next step shows as one button: Go or no go, Submit the bid, Record the
+  outcome or Convert to a project, each behind tenders.manage (conversion also needs
+  projects.add). The manual status moves come from the API's `allowed_moves`, with a note. A tab
+  bar links the overview, sections, submissions, documents, committees and evaluations.
+- [x] **Go or no go.** Weighted criteria scored 0 to 5 (the house criteria from the evaluation
+  summary, or the last decision), a live weighted score and recommendation, the threshold, and a
+  comment required whenever the decision goes against the recommendation.
+- [x] **Sections.** The shared DataTable with status, assignee, reviewer and due date; managers
+  add and edit sections with the staff picker; the assignee sends their section for review and
+  links a draft from the tender documents; the reviewer or a manager approves or asks for changes
+  with a comment, never on a section assigned to them.
+- [x] **Submissions.** One form for online, email and physical delivery (the right recipient for
+  each, reference, courier, subject, the bid as sent and the proof), an override when not every
+  section is approved, and the list of every delivery.
+- [x] **Documents.** Upload straight to object storage (the same three steps as project files) or
+  an https link, and removal.
+- [x] **Outcome.** Won with the award value, date, contract reference and dates; lost with the
+  reason (required), the winner and their price; lessons either way.
+- [x] **Conversion.** Name, billing type, contract value and dates prefilled from the outcome, the
+  owner (me or a committee member), the CRM client, a template (with templates.view), whether to
+  bring the committee and whether to create the draft treasury budget from the bid budget. The
+  project card links the project only for someone on it (`can_open_project`) and offers Send to
+  treasury again for a failed push to a budget manager on a plan with budget tracking.
+- [x] **Bid budget.** A card on the overview lists the lines of `metadata.bid_budget` with the
+  total; with tenders.change I add, edit and remove lines (name, category, amount, notes), checked
+  by the same rules as projects-api, and save them through `PUT /tenders/{id}` (removing every line
+  sends `bid_budget: null`). Once the tender is a project the card says the budget lives in
+  treasury and offers no edit.
+- [x] **Edit details.** With tenders.change: title, client name, the CRM client, source, priority,
+  estimated value, currency, deadline, description and tags (up to 20, 1 to 50 characters). Only
+  the fields that changed are sent, metadata as a merge; the status moves stay in the status
+  actions. Tags show on the overview.
+- [x] Tests: `node-tests/tenders.test.ts` (scoring, the comment rule, the lifecycle gates, the
+  section rules, submission recipients, bid budget lines and their first error, tags, the edit
+  patch, the budget retry) and `e2e/tenders.spec.ts` with `e2e/tenders-mocks.ts` at phone and
+  desktop, including saving and removing a bid budget, the locked budget of a converted tender and
+  editing the details.
+
+Still open:
+
+- [ ] Type check, lint, node tests, build and the Playwright run for this work (waiting for the
+  shared build slot).
+- [ ] My sections across tenders. The API lists sections per tender only.
+- [ ] Meeting platform links (sprint 9) and the notices to assignees, reviewers and the committee
+  (the events exist; the notifications consumers are a follow up in notifications-api).
+
 ### Sprint 1: Foundation & SSO
 - [x] Project scaffolding with Next.js 15.
 - [x] SSO integration with `auth-ui`.

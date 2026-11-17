@@ -21,6 +21,7 @@ import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { StaffPicker } from '@/components/common/staff-picker';
 import { useServicePermissions } from '@/hooks/usePermissions';
 import { PERMS } from '@/lib/auth/permissions';
+import { TenderNav } from '@/components/tenders/tender-nav';
 import type { PickPerson } from '@/lib/api/rbac';
 import type { TenderCommittee } from '@/types';
 
@@ -64,6 +65,7 @@ export default function CommitteesPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Committees" back={{ href: `/${orgSlug}/tenders/${tenderId}`, label: 'Tender' }} className="mb-0" />
+      <TenderNav orgSlug={orgSlug} tenderId={tenderId} />
 
       {/* Create committee */}
       {canManage && (
