@@ -18,7 +18,7 @@ import { useServicePermissions } from '@/hooks/usePermissions';
 import { forbiddenKind } from '@/lib/api/errors';
 import type { PersonLoad, Workload } from '@/lib/api/planning';
 import { PERMS } from '@/lib/auth/permissions';
-import { HEAT_CLASS, HEAT_LABEL, addWeeks, cellText, clampWeeks, heatBand, hoursText, mondayOf, thisMonday, weekLabel, type HeatBand } from '@/lib/planning/workload';
+import { HEAT_CLASS, HEAT_LABEL, addWeeks, capacityNote, capacitySourceText, cellText, clampWeeks, heatBand, hoursText, mondayOf, thisMonday, weekLabel, type HeatBand } from '@/lib/planning/workload';
 import { cn } from '@/lib/utils';
 import { CellSheet, type CellRef } from './cell-sheet';
 import { SettingsDialog } from './settings-dialog';
@@ -102,6 +102,9 @@ function Grid({ data, onOpen }: { data: Workload; onOpen: (c: CellRef) => void }
                   {hoursText(p.weekly_capacity)} a week
                   {p.overloaded_weeks > 0 && <span className="ml-1 font-medium text-destructive">, {p.overloaded_weeks} over</span>}
                 </span>
+                <span className="block text-xs text-muted-foreground" data-testid="capacity-source">
+                  {capacitySourceText(p)}
+                </span>
               </th>
               {cellsOf(p, data.weeks).map((c) => (
                 <td key={c.week} className="p-1">
@@ -154,7 +157,7 @@ function PersonCards({ data, onOpen }: { data: Workload; onOpen: (c: CellRef) =>
       name: p.name || p.email || 'Unnamed',
       cells: cellsOf(p, data.weeks),
       unassigned: false,
-      sub: `${hoursText(p.weekly_capacity)} a week${p.overloaded_weeks > 0 ? `, ${p.overloaded_weeks} ${p.overloaded_weeks === 1 ? 'week' : 'weeks'} over` : ''}`,
+      sub: `${hoursText(p.weekly_capacity)} a week (${capacitySourceText(p)})${p.overloaded_weeks > 0 ? `, ${p.overloaded_weeks} ${p.overloaded_weeks === 1 ? 'week' : 'weeks'} over` : ''}`,
     }));
     const un = unassignedCells(data);
     if (un.some((c) => c.demand > 0)) list.push({ id: 'unassigned', name: 'Not assigned', cells: un, unassigned: true, sub: 'Estimated work nobody has yet' });
@@ -318,7 +321,8 @@ export default function WorkloadPage() {
           </div>
           <Legend />
           <p className="text-xs text-muted-foreground">
-            Each open task&apos;s estimate is spread over its working days from start to due date and shared by its assignees. Capacity is {hoursText(data.default_weekly_hours)} a week unless set per person.
+            Each open task&apos;s estimate is spread over its working days from start to due date and shared by its assignees.{' '}
+            {capacityNote(data.capacity_source, hoursText(data.default_weekly_hours), data.erp_unavailable)}
           </p>
         </>
       )}

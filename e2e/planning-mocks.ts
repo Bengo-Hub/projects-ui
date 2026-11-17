@@ -196,10 +196,11 @@ function workload(from: string, weeks: number) {
     to: addDays(from, weeks * 7 - 1),
     weeks: list,
     default_weekly_hours: 40,
-    capacity_source: 'settings',
+    // Mary's hours come from her ERP work shift, the owner's from the workload setting.
+    capacity_source: 'mixed',
     people: [
-      { user_id: MEMBER, name: 'Mary Member', email: 'mary@acme.test', weekly_capacity: 40, total_demand: 68, overloaded_weeks: 1, weeks: [cell(list[0], 48, 40, 2), cell(list[1], 20, 40, 1)] },
-      { user_id: ME, name: 'Owner', email: 'owner@acme.test', weekly_capacity: 40, total_demand: 10, overloaded_weeks: 0, weeks: [cell(list[0], 10, 40, 1)] },
+      { user_id: MEMBER, name: 'Mary Member', email: 'mary@acme.test', weekly_capacity: 40, capacity_source: 'erp', work_shift: 'Office', total_demand: 68, overloaded_weeks: 1, weeks: [cell(list[0], 48, 40, 2), cell(list[1], 20, 40, 1)] },
+      { user_id: ME, name: 'Owner', email: 'owner@acme.test', weekly_capacity: 40, capacity_source: 'settings', total_demand: 10, overloaded_weeks: 0, weeks: [cell(list[0], 10, 40, 1)] },
     ],
     unassigned: [{ week_start: list[0], demand_hours: 6, task_count: 1 }],
     truncated: false,

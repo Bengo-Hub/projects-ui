@@ -52,6 +52,10 @@ test('the workload marks the overloaded week and a task is reassigned from its c
   const overloaded = page.getByRole('button', { name: /^Mary Member, W\d+, .+: 48 h of 40 h, overloaded$/ });
   await expect(overloaded).toBeVisible();
   expect(s.workloadCalls).toBeGreaterThan(0);
+  // Each person says where their capacity came from.
+  await expect(page.getByTestId(/^workload-row-/).first().getByTestId('capacity-source')).toHaveText('ERP: Office shift');
+  await expect(page.getByTestId(/^workload-row-/).nth(1).getByTestId('capacity-source')).toHaveText('Setting');
+  await expect(page.getByText(/where ERP holds one, else the workload setting/)).toBeVisible();
 
   await overloaded.click();
   const sheet = page.getByRole('dialog');

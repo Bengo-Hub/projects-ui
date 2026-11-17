@@ -22,6 +22,10 @@ export interface PersonLoad {
   name: string;
   email: string;
   weekly_capacity: number;
+  /** "erp" when ERP holds the person's working hours, else "settings". */
+  capacity_source?: 'erp' | 'settings';
+  /** The ERP work shift the capacity came from. */
+  work_shift?: string;
   total_demand: number;
   overloaded_weeks: number;
   weeks: WeekLoad[];
@@ -38,7 +42,10 @@ export interface Workload {
   to: string;
   weeks: string[];
   default_weekly_hours: number;
+  /** "erp", "settings" or "mixed". */
   capacity_source: string;
+  /** The ERP capacity read failed and the settings were used. */
+  erp_unavailable?: boolean;
   people: PersonLoad[];
   unassigned: UnassignedWeek[];
   truncated: boolean;

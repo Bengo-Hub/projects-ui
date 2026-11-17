@@ -61,8 +61,8 @@ function invoice(n: number, over: Partial<BillingInvoice> = {}): BillingInvoice 
   return {
     id: `inv-${n}`,
     invoice_number: `INV-000${n}`,
-    // What treasury answers for an invoice a service created: approved, not sent yet.
-    status: 'approved',
+    // What treasury answers for an invoice projects created: a draft (keep_draft), not sent yet.
+    status: 'draft',
     payment_status: 'unpaid',
     currency: 'KES',
     total_amount: '0.00',

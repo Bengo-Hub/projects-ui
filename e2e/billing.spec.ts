@@ -37,7 +37,7 @@ test('the billing tab lists the milestones and creates a milestone invoice in tr
 
   await page.getByRole('button', { name: 'Create invoice for Ground floor handover' }).click();
   await expect.poll(() => s.invoiceCalls).toEqual([M_READY]);
-  await expect(page.getByText(/INV-0002 is ready to send in treasury/)).toBeVisible();
+  await expect(page.getByText(/INV-0002 is ready as a draft in treasury/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Open in treasury' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Create invoice for Ground floor handover' })).toHaveCount(0);
 
@@ -88,7 +88,7 @@ test('a retainer is invoiced for this month', async ({ page, context, baseURL })
   await page.getByRole('button', { name: 'Invoice this month' }).click();
   await expect.poll(() => s.retainerCalls.length).toBe(1);
   expect(String(s.retainerCalls[0].month)).toMatch(/^\d{4}-\d{2}$/);
-  await expect(page.getByText(/Retainer invoice INV-0001 is ready to send/)).toBeVisible();
+  await expect(page.getByText(/Retainer invoice INV-0001 is ready as a draft in treasury/)).toBeVisible();
 });
 
 test('a read-only user sees billing without any write buttons', async ({ page, context, baseURL }) => {

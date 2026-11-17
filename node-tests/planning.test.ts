@@ -39,6 +39,15 @@ test('cells say the percent, or the hours without capacity', () => {
   assert.equal(w.cellText({ demand_hours: 44, capacity_hours: 40, load_pct: 110 }), '110%');
   assert.equal(w.cellText({ demand_hours: 6.25, capacity_hours: 0, load_pct: 0 }), '6.3 h');
   assert.equal(w.hoursText(40), '40 h');
+  // Capacity source per person and the page note (ERP capacity, 2026-11-17).
+  assert.equal(w.capacitySourceText({ capacity_source: 'erp', work_shift: 'Office' }), 'ERP: Office shift');
+  assert.equal(w.capacitySourceText({ capacity_source: 'erp' }), 'ERP');
+  assert.equal(w.capacitySourceText({ capacity_source: 'settings' }), 'Setting');
+  assert.equal(w.capacitySourceText({}), 'Setting');
+  assert.match(w.capacityNote('erp', '40 h'), /ERP work shift, less approved leave/);
+  assert.match(w.capacityNote('mixed', '40 h'), /where ERP holds one, else the workload setting \(40 h a week/);
+  assert.match(w.capacityNote('settings', '40 h'), /^Capacity is the workload setting/);
+  assert.match(w.capacityNote('erp', '40 h', true), /^ERP could not be reached/);
   assert.equal(w.validHours('37.5'), true);
   assert.equal(w.validHours('169'), false);
   assert.equal(w.validHours('-1'), false);

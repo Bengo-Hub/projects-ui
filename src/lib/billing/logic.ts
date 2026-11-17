@@ -57,7 +57,8 @@ export type InvoiceState = 'void' | 'paid' | 'overdue' | 'partial' | 'draft' | '
 /**
  * One state for an invoice's badge. Void and cancelled come first, then paid (a paid invoice is
  * never overdue), then overdue from treasury's is_overdue, then partly paid, then draft, then
- * ready to send: treasury approves the invoices projects creates, and the firm sends them there.
+ * ready to send. Projects creates its invoices as drafts in treasury (owner, 17 November 2026);
+ * once the firm approves one there it reads "Ready to send" until it is sent.
  */
 export function invoiceState(inv: InvoiceLike): InvoiceState {
   const status = (inv.status ?? '').toLowerCase();

@@ -131,3 +131,24 @@ export function clampWeeks(n: number): number {
   if (!Number.isFinite(n)) return 8;
   return Math.min(26, Math.max(1, Math.round(n)));
 }
+
+/** Where a person's capacity came from: ERP's work shift (leave and holidays already off) or the workload setting. */
+export interface CapacitySourceLike {
+  capacity_source?: string;
+  work_shift?: string;
+}
+
+/** The capacity source as the page names it: "ERP: Office shift", "ERP", or "Setting". */
+export function capacitySourceText(p: CapacitySourceLike): string {
+  if (p.capacity_source === 'erp') return p.work_shift ? `ERP: ${p.work_shift} shift` : 'ERP';
+  return 'Setting';
+}
+
+/** The page's note on capacity, by the grid's source ("erp", "settings" or "mixed"). */
+export function capacityNote(source: string | undefined, defaultWeekly: string, erpUnavailable?: boolean): string {
+  const fallback = `the workload setting (${defaultWeekly} a week unless set per person)`;
+  if (erpUnavailable) return `ERP could not be reached, so capacity is ${fallback}.`;
+  if (source === 'erp') return "Capacity is each person's ERP work shift, less approved leave and public holidays.";
+  if (source === 'mixed') return `Capacity is the ERP work shift, less approved leave and public holidays, where ERP holds one, else ${fallback}.`;
+  return `Capacity is ${fallback}. Give people a work shift in ERP to use their own hours, leave and holidays.`;
+}

@@ -44,6 +44,8 @@ test('one invoice state: void, then paid, then overdue, then partly paid', () =>
   assert.equal(b.invoiceState({ status: 'sent', payment_status: 'unpaid' }), 'unpaid');
   assert.equal(b.invoiceState({ status: 'approved', payment_status: 'unpaid' }), 'to_send');
   assert.equal(b.INVOICE_STATE_LABEL.to_send, 'Ready to send');
+  // A fresh project invoice is a treasury draft (keep_draft) and reads as one.
+  assert.equal(b.INVOICE_STATE_LABEL[b.invoiceState({ status: 'draft', payment_status: 'unpaid' })], 'Draft');
   assert.equal(b.INVOICE_STATE_LABEL.partial, 'Partly paid');
   assert.equal(b.isLiveInvoice({ status: 'void' }), false);
   assert.equal(b.isLiveInvoice({ status: 'draft' }), true);

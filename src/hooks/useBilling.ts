@@ -52,7 +52,7 @@ function useRefresh(orgSlug: string, projectId: string) {
 }
 
 function createdToast(orgSlug: string, inv: Invoice, what: string) {
-  toast.success(`${what} ${inv.invoice_number || ''} is ready to send in treasury`.replace(/\s+/g, ' '), {
+  toast.success(`${what} ${inv.invoice_number || ''} is ready as a draft in treasury`.replace(/\s+/g, ' '), {
     action: { label: 'Open in treasury', onClick: () => openInTreasury(orgSlug, inv.id) },
   });
 }
