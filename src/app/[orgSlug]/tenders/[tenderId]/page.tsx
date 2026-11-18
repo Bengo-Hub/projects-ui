@@ -250,7 +250,7 @@ export default function TenderDetailPage() {
                       <p className="text-xs text-muted-foreground">
                         {formatDateTime(m.scheduled_at)}, {m.platform}
                       </p>
-                      {m.meeting_url && (
+                      {m.meeting_url && m.meeting_url.startsWith('https://') && (
                         <a href={m.meeting_url} target="_blank" rel="noopener noreferrer" className="mt-0.5 flex items-center gap-1 text-xs text-primary hover:underline">
                           <ExternalLink className="h-3 w-3" />
                           Join

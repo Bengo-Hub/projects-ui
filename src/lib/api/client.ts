@@ -133,13 +133,17 @@ class ApiClient {
   ): Promise<{ data: T; headers: Record<string, string> }> {
     return this.instance.patch<T>(url, data, { headers }).then(withHeaders);
   }
-  /** A POST with extra headers (an Idempotency-Key) that also returns the answer's headers. */
+  /**
+   * A POST with extra headers (an Idempotency-Key) that also returns the answer's headers. timeoutMs
+   * overrides the 15 second default (AI drafts can take longer).
+   */
   public postWithHeaders<T>(
     url: string,
     data: unknown,
     headers: Record<string, string>,
+    timeoutMs?: number,
   ): Promise<{ data: T; headers: Record<string, string> }> {
-    return this.instance.post<T>(url, data, { headers }).then(withHeaders);
+    return this.instance.post<T>(url, data, { headers, ...(timeoutMs ? { timeout: timeoutMs } : {}) }).then(withHeaders);
   }
 
   /**

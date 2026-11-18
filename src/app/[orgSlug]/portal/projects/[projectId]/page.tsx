@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Download, ExternalLink, FileText, Flag, ListChecks, MessageSquare, Receipt } from 'lucide-react';
+import { ArrowLeft, Download, ExternalLink, FileChartColumn, FileText, Flag, ListChecks, MessageSquare, Receipt } from 'lucide-react';
 import { formatCurrency, formatDate } from '@bengo-hub/shared-ui-lib/format';
 import { InvoiceBadge } from '@/components/billing/invoice-badge';
 import { moneyOf, safePayUrl } from '@/lib/billing/logic';
@@ -16,6 +16,7 @@ import { ClientThread } from '@/components/portal/client-thread';
 import { MilestoneReview } from '@/components/portal/milestone-review';
 import { PortalProgress } from '@/components/portal/portal-progress';
 import { PortalRefused } from '@/components/portal/portal-refused';
+import { PortalReports } from '@/components/portal/portal-reports';
 import {
   usePortalFiles,
   usePortalInvoices,
@@ -36,6 +37,7 @@ const TABS = [
   { key: 'tasks', label: 'Tasks', icon: ListChecks },
   { key: 'files', label: 'Files', icon: FileText },
   { key: 'invoices', label: 'Invoices', icon: Receipt },
+  { key: 'reports', label: 'Reports', icon: FileChartColumn },
   { key: 'messages', label: 'Messages', icon: MessageSquare },
 ] as const;
 type TabKey = (typeof TABS)[number]['key'];
@@ -260,6 +262,8 @@ export default function PortalProjectPage() {
   const { tenant } = useTenantBranding();
   const firm = tenant?.orgName || tenant?.name || 'the firm';
   const focus = search?.get('milestone') ?? null;
+  // The share notice links ?tab=reports&report={id}.
+  const reportId = search?.get('report') || null;
   const requested = search?.get('tab') as TabKey | null;
   const tab: TabKey = TABS.some((t) => t.key === requested) ? (requested as TabKey) : 'milestones';
   const summary = usePortalSummary(orgSlug, projectId);
@@ -287,7 +291,16 @@ export default function PortalProjectPage() {
     const next = new URLSearchParams(search?.toString() ?? '');
     next.set('tab', key);
     if (key !== 'milestones') next.delete('milestone');
+    next.delete('report');
     router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+  };
+  const openReport = (id: string | null) => {
+    const next = new URLSearchParams(search?.toString() ?? '');
+    next.set('tab', 'reports');
+    next.delete('milestone');
+    if (id) next.set('report', id);
+    else next.delete('report');
+    router.push(`${pathname}?${next.toString()}`, { scroll: false });
   };
 
   return (
@@ -383,6 +396,11 @@ export default function PortalProjectPage() {
         {tab === 'invoices' && (
           <Section title="Invoices">
             <Invoices orgSlug={orgSlug} projectId={projectId} />
+          </Section>
+        )}
+        {tab === 'reports' && (
+          <Section title="Reports">
+            <PortalReports orgSlug={orgSlug} projectId={projectId} reportId={reportId} onOpen={openReport} />
           </Section>
         )}
         {tab === 'messages' && (

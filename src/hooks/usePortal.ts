@@ -112,6 +112,23 @@ export function usePortalThread(orgSlug: string, projectId: string) {
   return usePaged(orgSlug, projectId, 'thread', (page) => portalApi.thread(orgSlug, projectId, { limit: 50, page }), 30_000);
 }
 
+/** The status reports the team shared, newest period first. */
+export function usePortalReports(orgSlug: string, projectId: string) {
+  return usePaged(orgSlug, projectId, 'reports', (page) => portalApi.reports(orgSlug, projectId, { limit: 20, page }), 60_000);
+}
+
+/** One shared report; a 404 means it was unshared or the link is out of date. */
+export function usePortalReport(orgSlug: string, projectId: string, reportId: string | null) {
+  const { userId, enabled } = useScope(orgSlug);
+  return useQuery({
+    queryKey: [KEY, userId, orgSlug, projectId, 'report', reportId],
+    queryFn: () => portalApi.report(orgSlug, projectId, reportId ?? ''),
+    enabled: enabled && !!projectId && !!reportId,
+    retry: noRetryOnRefusal,
+    staleTime: 60_000,
+  });
+}
+
 export function usePortalPost(orgSlug: string, projectId: string) {
   const qc = useQueryClient();
   const { userId } = useScope(orgSlug);

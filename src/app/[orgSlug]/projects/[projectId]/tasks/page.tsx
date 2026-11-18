@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useSyncExternalStore } from 'react';
 import { useParams } from 'next/navigation';
-import { CalendarDays, Columns3, List, Plus, Settings2 } from 'lucide-react';
+import { CalendarDays, Columns3, List, ListPlus, Plus, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageLoading } from '@/components/ui/loading';
 import { ErrorBanner } from '@/components/ui/error-banner';
@@ -14,6 +14,9 @@ import { ListView } from '@/components/work/list-view';
 import { CalendarView } from '@/components/work/calendar-view';
 import { TaskDrawer } from '@/components/work/task-drawer';
 import { CreateTaskDialog } from '@/components/work/create-task-dialog';
+import { TaskBreakdownSheet } from '@/components/ai/task-breakdown-sheet';
+import { useServicePermissions } from '@/hooks/usePermissions';
+import { PERMS } from '@/lib/auth/permissions';
 import { StatusEditor } from '@/components/work/status-editor';
 import { TaskFilterBar } from '@/components/work/task-filters';
 import { LiveDot } from '@/components/work/live-dot';
@@ -49,6 +52,10 @@ export default function TasksPage() {
   const live = useProjectStream(orgSlug, projectId, access.tracking && access.canViewAll);
   const [creating, setCreating] = useState<{ status?: string } | null>(null);
   const [editingColumns, setEditingColumns] = useState(false);
+  // AI task breakdown (sprint 10): drafts only, created through the ordinary task create.
+  const { can } = useServicePermissions();
+  const canDraft = access.canAdd && can(PERMS.aiAdd);
+  const [drafting, setDrafting] = useState(false);
   // Saved filters live in this browser: the server render and the first client render use none
   // (so hydration matches), then the browser's copy; changes are kept per project.
   const isClient = useSyncExternalStore(noopSubscribe, () => true, () => false);
@@ -86,6 +93,12 @@ export default function TasksPage() {
               <Button variant="outline" size="sm" className="h-11 sm:h-8" onClick={() => setEditingColumns(true)}>
                 <Settings2 className="h-4 w-4" aria-hidden />
                 <span className="max-sm:sr-only">Columns</span>
+              </Button>
+            )}
+            {canDraft && (
+              <Button variant="outline" size="sm" className="h-11 sm:h-8" onClick={() => setDrafting(true)}>
+                <ListPlus className="h-4 w-4" aria-hidden />
+                <span className="max-sm:sr-only">Draft from brief</span>
               </Button>
             )}
             {access.canAdd && (
@@ -137,6 +150,7 @@ export default function TasksPage() {
       {creating && (
         <CreateTaskDialog orgSlug={orgSlug} projectId={projectId} open onOpenChange={(o) => !o && setCreating(null)} initial={creating.status ? { status: creating.status } : undefined} />
       )}
+      {canDraft && <TaskBreakdownSheet orgSlug={orgSlug} projectId={projectId} open={drafting} onOpenChange={setDrafting} />}
       {editingColumns && (
         <StatusEditor orgSlug={orgSlug} projectId={projectId} statuses={columns} counts={counts.data ?? []} open onOpenChange={(o) => !o && setEditingColumns(false)} />
       )}

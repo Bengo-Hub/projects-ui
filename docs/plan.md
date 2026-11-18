@@ -542,8 +542,34 @@ Still open:
 - [ ] Type check, lint, node tests, build and the Playwright run for this work (waiting for the
   shared build slot).
 - [ ] My sections across tenders. The API lists sections per tender only.
-- [ ] Meeting platform links (sprint 9) and the notices to assignees, reviewers and the committee
-  (the events exist; the notifications consumers are a follow up in notifications-api).
+- [ ] Meeting platform links (sprint 9). The notices to assignees, reviewers and the committee were
+  built on 2026-11-17 (projects-api `project.tender.notice.*`, notifications-api consumer); no
+  screen change was needed.
+
+### Sprint 7: Governance and reporting (UI written 2026-11-17)
+
+Against the projects-api contract in `docs/api.md`, "Governance and reporting (sprint 7)".
+
+- [x] Project Reports tab (`/{org}/projects/{id}/reports`, `projects.reports.view`): the history
+  newest period first with status, overall rating and the shared marker; New report with last full
+  week as the default period and the 409 for a period already reported; the editor
+  (`/reports/{reportId}`) with four RAG pickers showing the suggestion and its reason, the narrative
+  in the shared rich text editor, editable highlights, trimmable milestones and risks, KPI tiles,
+  the financial snapshot or the "hidden for your role" note, Refresh, Save, Publish (needs the
+  overall rating), Delete draft, the HTML preview and the PDF preview and download.
+- [x] Share with the client (`reports.manage` and `portal.manage`), with Include financials offered
+  only with `financials.view` and `budget_tracking`; Unshare.
+- [x] Governance tab (`/{org}/projects/{id}/governance`): seats (a teammate or someone outside),
+  the RACI matrix (cards on a phone, a table on a desktop, one accountable and at least one
+  responsible checked before sending) and the decision log (log, edit and delete proposed ones,
+  approve or reject as a named approver, supersede).
+- [x] Portal Reports tab (`?tab=reports&report={id}`, the share notice's link): the shared reports,
+  a readable HTML page and the PDF.
+- [x] Settings, Notifications: the weekly digest switch; readers see it, only an administrator
+  changes it.
+- Tests: `node-tests/reports.test.ts`; Playwright `e2e/reports.spec.ts`, `e2e/governance.spec.ts`,
+  `e2e/portal-reports.spec.ts` at phone and desktop.
+- [ ] Type check, lint, node tests, build and Playwright (waiting for the shared build slot).
 
 ### Sprint 1: Foundation & SSO
 - [x] Project scaffolding with Next.js 15.
@@ -635,3 +661,28 @@ anyone else, and projects-api checks again on every route.
 Pure helpers live in `src/lib/security/field-keys.ts` with node tests in
 `node-tests/field-keys.test.ts`. The API side is in projects-api `docs/api.md` ("Platform: field
 keys") and `docs/architecture.md` ("Field encryption keys").
+
+## Sprint 10: AI assistant (UI written 2026-11-17)
+
+Drafts only, paid from the organisation's prepaid AI credits (projects-api `docs/api.md`, "AI
+assistant"). Nothing is saved until the person picks what to keep, and the save goes through the
+ordinary task, risk and task update calls. Plain icons only, no sparkle or bot icons.
+
+- **Tasks page:** "Draft from brief" opens a sheet; the brief goes to the assistant, the drafts come
+  back ticked and editable, and "Add N tasks" creates only the ticked ones, in order.
+- **Risks page:** "Suggest risks" opens a sheet with scored suggestions; the ticked ones are added as
+  open risks.
+- **Project Assistant tab** (`/projects/{id}/assistant`): a status summary draft for 7, 14 or 30 days
+  (health, summary, done, next steps, issues, copy as text) and effort estimates for open tasks
+  without one, each saved only with "Use N h".
+- **Smart search** (`/search`, in the Work menu): a plain-language question ranked over the person's
+  projects and, with tender access, the tenders; every result links to the record.
+- **AI usage** (`/settings/ai-usage`, administrators): requests and credits per feature and each
+  request's outcome, with a "Buy AI credits" link.
+- **Refusals:** out of credits shows the reason and "Buy AI credits"; a provider or wallet failure
+  says nothing was charged and offers "Try again", which reuses the same request key so a retry is
+  never charged twice. Every draft says what it cost and shows the assistant's review notes.
+- **Access:** `projects.ai.add` (project manager, member) shows the AI buttons, together with the
+  permission of what the draft becomes; `projects.ai.view` (administrator) shows the usage page.
+- **Tests:** `node-tests/ai.test.ts` (error texts, draft to body mapping, roles) and
+  `e2e/ai.spec.ts` with `e2e/ai-mocks.ts` at 390 px and desktop.

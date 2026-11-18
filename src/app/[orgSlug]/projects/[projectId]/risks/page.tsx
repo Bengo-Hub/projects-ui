@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Plus, ShieldAlert, Trash2, X } from 'lucide-react';
+import { Plus, ShieldAlert, ShieldPlus, Trash2, X } from 'lucide-react';
+import { RiskSuggestionsSheet } from '@/components/ai/risk-suggestions-sheet';
 import { SearchableCombobox, type ComboboxOption } from '@bengo-hub/shared-ui-lib/combobox';
 import { DataTable, type DataTableColumn } from '@bengo-hub/shared-ui-lib/data-table';
 import { formatDate } from '@bengo-hub/shared-ui-lib/format';
@@ -51,6 +52,9 @@ export default function RisksPage() {
   const canAdd = can(PERMS.risksAdd);
   const canChange = can(PERMS.risksChange);
   const canDelete = can(PERMS.risksDelete);
+  // AI risk suggestions (sprint 10): drafts only, added through the ordinary risk create.
+  const canSuggest = canAdd && can(PERMS.aiAdd);
+  const [suggesting, setSuggesting] = useState(false);
   const { people, nameOf } = useProjectPeople(orgSlug, projectId);
 
   const [status, setStatus] = useState('');
@@ -135,10 +139,18 @@ export default function RisksPage() {
       className="mb-0"
       actions={
         canAdd ? (
-          <Button className="h-11 sm:h-9" onClick={() => setEditing('new')}>
-            <Plus className="h-4 w-4" aria-hidden />
-            Add risk
-          </Button>
+          <>
+            {canSuggest && (
+              <Button variant="outline" className="h-11 sm:h-9" onClick={() => setSuggesting(true)}>
+                <ShieldPlus className="h-4 w-4" aria-hidden />
+                <span className="max-sm:sr-only">Suggest risks</span>
+              </Button>
+            )}
+            <Button className="h-11 sm:h-9" onClick={() => setEditing('new')}>
+              <Plus className="h-4 w-4" aria-hidden />
+              Add risk
+            </Button>
+          </>
         ) : undefined
       }
     />
@@ -231,6 +243,7 @@ export default function RisksPage() {
           onClose={() => setEditing(null)}
         />
       )}
+      {canSuggest && <RiskSuggestionsSheet orgSlug={orgSlug} projectId={projectId} open={suggesting} onOpenChange={setSuggesting} />}
       <ConfirmDialog
         open={!!deleting}
         onOpenChange={(o) => !o && setDeleting(null)}

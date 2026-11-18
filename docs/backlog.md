@@ -38,7 +38,17 @@ The sections, submissions, documents, go/no-go, outcome, conversion, bid budget 
 (plan.md, "Tenders: API sprints 1 and 2"). Still open:
 
 - A "my sections" view across tenders (needs a projects-api route).
-- Notices to section assignees and reviewers, committee members and on award (notifications-api consumers).
+- ~~Notices to section assignees and reviewers, committee members and on award.~~ Built 2026-11-17
+  in projects-api and notifications-api.
+
+## Governance and reporting, sprint 7 (written 2026-11-17)
+
+Reports, governance, the portal's shared reports and the digest switch are written (plan.md,
+"Sprint 7"). Still open:
+
+- Excel export of a report and the activity reports with signing sheets (the API has neither yet).
+- A per-person digest opt-out: the switch is per tenant today; a person can only mute the notice in
+  notification preferences.
 
 ## Security
 
@@ -102,3 +112,12 @@ Sprint 12 screens built 2026-11-16 (see plan.md, "Sprint 12"): task drawer, seve
   - The workload capacity has no ERP read yet (projects-api decision), and public holidays are not counted.
 - Fixed 2026-11-17: `pnpm dev` served on 3005 while every frontend's SSO dev redirect (auth-api seed) is `http://localhost:3000`, so a local sign-in could not return. Dev now runs on 3000; `pnpm start` (Playwright's server) stays on 3005.
 - Project status reports. Source: plan.md Sprint 3. API sprint 7.
+
+## AI assistant, sprint 10 (written 2026-11-17)
+
+- Wire the status summary into the status report editor (sprint 7): a "Draft narrative" button that
+  calls `POST /projects/{id}/ai/status-summary` and fills the narrative and highlights.
+- Show the AI credit balance next to the AI buttons (subscriptions-api `GET /credits`) and a deep
+  link to the AI credits purchase rather than the general billing page.
+- A "Draft subtasks" entry in the task drawer (the sheet already takes a parent task).
+- Semantic search with embeddings once the API has it (sprint 10 US-10.1).

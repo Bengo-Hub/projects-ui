@@ -9,6 +9,7 @@ import type {
   PortalTask,
   ThreadComment,
 } from '@/types/portal';
+import type { PortalReport } from '@/types/reports';
 import type { Decision } from '@/lib/portal/logic';
 
 // The client portal's own HTTP client. It never shares the staff apiClient: the portal token (OAuth
@@ -108,5 +109,14 @@ export const portalApi = {
   post: (orgSlug: string, id: string, content: string, idempotencyKey: string) =>
     portalHttp
       .post<ThreadComment>(`${base(orgSlug)}/${enc(id)}/thread`, { content }, { headers: { 'Idempotency-Key': idempotencyKey } })
+      .then((r) => r.data),
+  // Shared status reports (sprint 7 with sprint 14, US-14.5): 404 unless published and shared.
+  reports: (orgSlug: string, id: string, params?: PageParams) =>
+    portalHttp.get<PaginatedResponse<PortalReport>>(`${base(orgSlug)}/${enc(id)}/status-reports`, { params }).then((r) => r.data),
+  report: (orgSlug: string, id: string, reportId: string) =>
+    portalHttp.get<PortalReport>(`${base(orgSlug)}/${enc(id)}/status-reports/${enc(reportId)}`).then((r) => r.data),
+  reportPdf: (orgSlug: string, id: string, reportId: string) =>
+    portalHttp
+      .get<Blob>(`${base(orgSlug)}/${enc(id)}/status-reports/${enc(reportId)}/pdf`, { responseType: 'blob', timeout: 60000 })
       .then((r) => r.data),
 };

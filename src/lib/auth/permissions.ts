@@ -76,6 +76,16 @@ export const PERMS = {
   templatesDelete: 'projects.templates.delete',
   automationView: 'projects.automation.view',
   automationManage: 'projects.automation.manage',
+
+  // Governance and reporting (sprint 7).
+  reportsView: 'projects.reports.view',
+  reportsManage: 'projects.reports.manage',
+  governanceView: 'projects.governance.view',
+  governanceManage: 'projects.governance.manage',
+
+  // AI assistant (sprint 10): add asks for drafts (spends AI credits), view reads the usage log.
+  aiView: 'projects.ai.view',
+  aiAdd: 'projects.ai.add',
 } as const;
 
 export type PermissionCode = (typeof PERMS)[keyof typeof PERMS];
@@ -142,6 +152,12 @@ export const PERMISSION_NAMES: Record<PermissionCode, string> = {
   'projects.templates.delete': 'Delete project templates',
   'projects.automation.view': 'View automation rules',
   'projects.automation.manage': 'Manage status rules and automations',
+  'projects.reports.view': 'View status reports',
+  'projects.reports.manage': 'Write, publish and share status reports',
+  'projects.governance.view': 'View governance, RACI and the decision log',
+  'projects.governance.manage': 'Manage governance, RACI and the decision log',
+  'projects.ai.view': "View the organisation's AI usage",
+  'projects.ai.add': 'Ask the AI assistant for drafts (spends AI credits)',
 };
 
 export const ALL_PERMISSIONS = Object.values(PERMS) as PermissionCode[];
@@ -216,17 +232,20 @@ const PROJECT_MANAGER: string[] = [
   PERMS.workloadView, PERMS.baselinesView, PERMS.baselinesAdd, PERMS.baselinesDelete,
   PERMS.risksView, PERMS.risksAdd, PERMS.risksChange, PERMS.risksDelete,
   PERMS.changeRequestsManage, PERMS.changeApprovals, PERMS.templatesView, PERMS.templatesAdd, PERMS.automationManage,
+  PERMS.reportsManage, PERMS.governanceManage,
+  PERMS.aiAdd,
 ];
 const MEMBER: string[] = [
   PERMS.projectsView, PERMS.tasksView, PERMS.tasksAdd, PERMS.tasksChangeOwn,
   PERMS.milestonesView, PERMS.membersView, PERMS.commentsView, PERMS.commentsAdd, PERMS.commentsChangeOwn, PERMS.commentsDeleteOwn,
   PERMS.tendersView, PERMS.timeViewOwn, PERMS.timeAdd, PERMS.qaRun,
   PERMS.baselinesView, PERMS.risksView, PERMS.risksAdd, PERMS.changeRequestsView, PERMS.changeRequestsAdd,
-  PERMS.templatesView, PERMS.automationView,
+  PERMS.templatesView, PERMS.automationView, PERMS.reportsView, PERMS.governanceView,
+  PERMS.aiAdd,
 ];
 const VIEWER: string[] = [
   PERMS.projectsView, PERMS.tasksView, PERMS.milestonesView, PERMS.membersView, PERMS.commentsView, PERMS.tendersView, PERMS.qaView,
-  PERMS.baselinesView, PERMS.risksView, PERMS.changeRequestsView,
+  PERMS.baselinesView, PERMS.risksView, PERMS.changeRequestsView, PERMS.reportsView, PERMS.governanceView,
 ];
 
 export const ROLE_PERMISSIONS: Record<string, string[]> = {

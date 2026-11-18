@@ -1,5 +1,6 @@
-import { ClipboardCheck, Clock, FileText, FolderKanban, KeyRound, LayoutDashboard, ListTodo, PieChart, ShieldCheck, Stamp, Users, UsersRound, type LucideIcon } from 'lucide-react';
+import { Bell, ClipboardCheck, Clock, FileText, FolderKanban, KeyRound, LayoutDashboard, ListTodo, PieChart, ShieldCheck, Stamp, Users, UsersRound, type LucideIcon } from 'lucide-react';
 import { PERMS } from '@/lib/auth/permissions';
+import { AIUsageIcon, SmartSearchIcon } from '@/lib/ai/nav-icons';
 
 export interface NavItem {
   label: string;
@@ -44,6 +45,8 @@ export const NAV: NavGroup[] = [
       // Before Portfolio: the phone bar holds four tabs, so with Time on it Portfolio moves to More.
       { label: 'Time', path: '/time', icon: Clock, requiresFeatures: ['time_tracking', 'attendance'], permission: [PERMS.timeViewOwn], bottomNav: true },
       { label: 'Portfolio', path: '/portfolio', icon: PieChart, subFeature: 'budget_tracking', permission: [PERMS.financialsView], bottomNav: true },
+      // Sprint 10: AI smart search over the person's projects and tenders (AI credits).
+      { label: 'Smart search', path: '/search', icon: SmartSearchIcon, subFeature: 'project_management', permission: [PERMS.aiAdd] },
     ],
   },
   {
@@ -59,6 +62,10 @@ export const NAV: NavGroup[] = [
     items: [
       { label: 'Team', path: '/settings/team', icon: UsersRound, permission: [PERMS.rbacManage] },
       { label: 'Roles and access', path: '/settings/roles', icon: ShieldCheck, permission: [PERMS.rbacManage] },
+      // Sprint 7: the weekly digest switch; readers see its state, only an administrator changes it.
+      { label: 'Notifications', path: '/settings/notifications', icon: Bell, subFeature: 'project_management', permission: [PERMS.reportsView] },
+      // Sprint 10: the organisation's AI requests and credits, administrators only.
+      { label: 'AI usage', path: '/settings/ai-usage', icon: AIUsageIcon, permission: [PERMS.aiView] },
     ],
   },
   {

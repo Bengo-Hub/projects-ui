@@ -102,6 +102,11 @@ export default function ProjectDetailPage() {
       locked: !hasAutomation,
       perm: [PERMS.automationView, PERMS.automationManage],
     },
+    // Governance and reporting (sprint 7): part of project_management, which every tier has.
+    { href: `/${orgSlug}/projects/${projectId}/reports`, label: 'Reports', perm: PERMS.reportsView },
+    { href: `/${orgSlug}/projects/${projectId}/governance`, label: 'Governance', perm: PERMS.governanceView },
+    // AI assistant (sprint 10): status summary and effort estimates, paid from AI credits.
+    { href: `/${orgSlug}/projects/${projectId}/assistant`, label: 'Assistant', perm: PERMS.aiAdd },
   ].filter((t) => can(t.perm));
 
   const tasksDone = summary?.completed_tasks ?? 0;
