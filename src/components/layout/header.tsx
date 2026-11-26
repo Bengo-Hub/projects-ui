@@ -18,6 +18,10 @@ const SERVICE_URLS: Partial<Record<ServiceKey, string>> = {
   subscriptions: process.env.NEXT_PUBLIC_SUBSCRIPTIONS_UI_URL ?? 'https://pricing.codevertexafrica.com',
   auth: process.env.NEXT_PUBLIC_AUTH_UI_URL ?? 'https://accounts.codevertexafrica.com',
   afya: process.env.NEXT_PUBLIC_HOSPITAL_UI_URL ?? 'https://afya.codevertexafrica.com',
+  ticketing: process.env.NEXT_PUBLIC_TICKETING_UI_URL ?? 'https://ticketing.codevertexafrica.com',
+  logistics: process.env.NEXT_PUBLIC_LOGISTICS_UI_URL ?? 'https://logistics.codevertexafrica.com',
+  library: process.env.NEXT_PUBLIC_LIBRARY_UI_URL ?? 'https://library.codevertexafrica.com',
+  truload: process.env.NEXT_PUBLIC_TRULOAD_UI_URL ?? 'https://truload.codevertexafrica.com',
 };
 
 interface HeaderProps {
