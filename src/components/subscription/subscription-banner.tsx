@@ -6,7 +6,8 @@ import { useSubscription } from '@/hooks/use-subscription';
 const SUBSCRIPTIONS_UI_URL =
   process.env.NEXT_PUBLIC_SUBSCRIPTIONS_UI_URL || 'https://pricing.codevertexafrica.com';
 
-export const UPGRADE_URL = `${SUBSCRIPTIONS_UI_URL}/plans?service=projects`;
+// Upgrades open the subscriptions billing page (owner, 28 November 2026).
+export const UPGRADE_URL = `${SUBSCRIPTIONS_UI_URL}/billing?service=projects`;
 export const BILLING_URL = `${SUBSCRIPTIONS_UI_URL}/billing`;
 
 /**
